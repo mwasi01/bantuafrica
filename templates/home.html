@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Welcome to Bantu Africa{% endblock %}
+
+{% block content %}
+<div class="hero-section text-center py-5">
+    <div class="container">
+        <h1 class="display-4 mb-4">Welcome to <span class="text-primary">Bantu Africa</span></h1>
+        <p class="lead mb-4">Connect with your community. Share stories. Build relationships.</p>
+        
+        {% if not current_user.is_authenticated %}
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body p-5">
+                        <h3 class="card-title mb-4">Join our community today</h3>
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg w-100 mb-3">
+                                    <i class="fas fa-user-plus"></i> Create Account
+                                </a>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg w-100">
+                                    <i class="fas fa-sign-in-alt"></i> Sign In
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="features-section py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5">Why Choose Bantu Africa?</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h4>Community Focused</h4>
+                        <p>Connect with people in your local community and across Africa.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-share-alt fa-3x text-primary mb-3"></i>
+                        <h4>Share Stories</h4>
+                        <p>Share your experiences, photos, and moments with your network.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="fas fa-lock fa-3x text-primary mb-3"></i>
+                        <h4>Safe Space</h4>
+                        <p>A secure platform built with privacy and safety in mind.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

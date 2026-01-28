@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile - Bantu Africa{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Edit Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-4 text-center mb-4">
+                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
+                                 class="rounded-circle mb-3" width="150" height="150"
+                                 onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'"
+                                 id="profile-preview">
+                            <div class="mt-2">
+                                <label for="profile_image" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-camera"></i> Change Photo
+                                </label>
+                                <input type="file" class="d-none" id="profile_image" name="profile_image" 
+                                       accept="image/*" onchange="previewImage(event)">
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ current_user.username }}" required minlength="3" maxlength="20">
+                            </div>
+                            <div class="mb-3">
+                                <label for="bio" class="form-label">Bio</label>
+                                <textarea class="form-control" id="bio" name="bio" rows="3" 
+                                          placeholder="Tell us about yourself...">{{ current_user.bio or '' }}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ current_user.location or '' }}" 
+                                       placeholder="Where are you from?">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewImage(event) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const output = document.getElementById('profile-preview');
+        output.src = reader.result;
+    };
+    reader.readAsDataURL(event.target.files[0]);
+}
+</script>
+{% endblock %}

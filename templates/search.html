@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Search - Bantu Africa{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <!-- Search Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('search') }}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" 
+                               value="{{ query }}" placeholder="Search for users or posts...">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if query %}
+            <!-- Search Results -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Search Results for "{{ query }}"</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Users Results -->
+                    <h6 class="mb-3">Users</h6>
+                    {% if users %}
+                        <div class="row">
+                            {% for user in users %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <img src="{{ url_for('static', filename='uploads/' + user.profile_image) }}" 
+                                                 class="rounded-circle me-3" width="50" height="50"
+                                                 onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
+                                            <div>
+                                                <h6 class="mb-0">
+                                                    <a href="{{ url_for('user_profile', username=user.username) }}">
+                                                        {{ user.username }}
+                                                    </a>
+                                                </h6>
+                                                {% if user.bio %}
+                                                <small class="text-muted">{{ user.bio[:50] }}...</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No users found.</p>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <!-- Posts Results -->
+                    <h6 class="mb-3">Posts</h6>
+                    {% if posts %}
+                        {% for post in posts %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" 
+                                             class="rounded-circle me-2" width="40" height="40"
+                                             onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
+                                        <div>
+                                            <h6 class="mb-0">{{ post.author.username }}</h6>
+                                            <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y') }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {% if post.title %}
+                                <h6>{{ post.title }}</h6>
+                                {% endif %}
+                                
+                                <p>{{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}</p>
+                                
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <span class="badge bg-light text-dark me-2">
+                                            <i class="far fa-heart"></i> {{ post.like_count() }}
+                                        </span>
+                                        <span class="badge bg-light text-dark">
+                                            <i class="far fa-comment"></i> {{ post.comment_count() }}
+                                        </span>
+                                    </div>
+                                    <a href="{{ url_for('view_post', post_id=post.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        View Post
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No posts found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

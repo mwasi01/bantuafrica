@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ user.username }} - Bantu Africa{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <!-- Profile Card -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <img src="{{ url_for('static', filename='uploads/' + user.profile_image) }}" 
+                     class="rounded-circle mb-3" width="150" height="150"
+                     onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
+                <h4>{{ user.username }}</h4>
+                {% if user.bio %}
+                <p class="text-muted">{{ user.bio }}</p>
+                {% endif %}
+                {% if user.location %}
+                <p><i class="fas fa-map-marker-alt"></i> {{ user.location }}</p>
+                {% endif %}
+                <p class="text-muted">
+                    <i class="fas fa-calendar"></i> Joined {{ user.created_at.strftime('%B %Y') }}
+                </p>
+                
+                <div class="row mb-3">
+                    <div class="col-4">
+                        <h5>{{ posts|length }}</h5>
+                        <small>Posts</small>
+                    </div>
+                    <div class="col-4">
+                        <h5>{{ followers_count }}</h5>
+                        <small>Followers</small>
+                    </div>
+                    <div class="col-4">
+                        <h5>{{ following_count }}</h5>
+                        <small>Following</small>
+                    </div>
+                </div>
+                
+                {% if current_user != user %}
+                    {% if is_following %}
+                    <a href="{{ url_for('unfollow_user', username=user.username) }}" 
+                       class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="fas fa-user-minus"></i> Unfollow
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('follow_user', username=user.username) }}" 
+                       class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-user-plus"></i> Follow
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- User's Posts -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ user.username }}'s Posts</h5>
+            </div>
+            <div class="card-body">
+                {% if posts %}
+                    {% for post in posts %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex justify-content-between">
+                            <h6>{{ post.title or 'No title' }}</h6>
+                            <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y') }}</small>
+                        </div>
+                        <p>{{ post.content[:150] }}{% if post.content|length > 150 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="badge bg-secondary me-2">
+                                    <i class="far fa-heart"></i> {{ post.like_count() }}
+                                </span>
+                                <span class="badge bg-secondary">
+                                    <i class="far fa-comment"></i> {{ post.comment_count() }}
+                                </span>
+                            </div>
+                            <a href="{{ url_for('view_post', post_id=post.id) }}" class="btn btn-sm btn-outline-primary">
+                                View Post
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-newspaper fa-4x text-muted mb-3"></i>
+                        <h5>No posts yet</h5>
+                        <p class="text-muted">{{ user.username }} hasn't created any posts yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
