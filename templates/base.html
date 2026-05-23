@@ -1,130 +1,346 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Bantu Africa - Connect with your community{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Bantu Africa - Connect with your community. Share stories. Build relationships.">
     
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+    
+    <title>{% block title %}Bantu Africa{% endblock %}</title>
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
-    {% block extra_css %}{% endblock %}
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+    
+    {% block extra_head %}{% endblock %}
+    
+    <style>
+        /* ============ FLASH MESSAGES ============ */
+        .flash-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .flash-message {
+            padding: 14px 20px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s ease, fadeOut 0.3s ease 3.5s forwards;
+            backdrop-filter: blur(10px);
+        }
+        
+        .flash-message.success {
+            background: rgba(76, 175, 80, 0.95);
+            color: white;
+        }
+        
+        .flash-message.danger {
+            background: rgba(255, 45, 85, 0.95);
+            color: white;
+        }
+        
+        .flash-message.info {
+            background: rgba(0, 122, 255, 0.95);
+            color: white;
+        }
+        
+        .flash-message.warning {
+            background: rgba(255, 149, 0, 0.95);
+            color: white;
+        }
+        
+        .flash-message i {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .flash-close {
+            margin-left: auto;
+            cursor: pointer;
+            opacity: 0.8;
+            font-size: 16px;
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 0;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; visibility: hidden; }
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">
-                <i class="fas fa-users me-2"></i>
-                <strong>Bantu Africa</strong>
+    <!-- Desktop Top Navigation -->
+    <nav class="desktop-nav d-none d-lg-flex" style="
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        padding: 12px 24px;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    ">
+        <div style="display: flex; align-items: center; gap: 30px;">
+            <a href="{{ url_for('home') }}" style="font-size: 22px; font-weight: 800; color: var(--accent); text-decoration: none;">
+                <i class="fas fa-globe-africa"></i> Bantu
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                {% if current_user.is_authenticated %}
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('new_post') }}">
-                            <i class="fas fa-plus-circle"></i> Create Post
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('search') }}">
-                            <i class="fas fa-search"></i> Search
-                        </a>
-                    </li>
-                </ul>
-                
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-                                 class="rounded-circle me-1" width="30" height="30" 
-                                 onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                            {{ current_user.username }}
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('profile') }}">
-                                <i class="fas fa-user"></i> My Profile
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('update_profile') }}">
-                                <i class="fas fa-edit"></i> Edit Profile
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                <i class="fas fa-sign-out-alt"></i> Logout
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-                {% else %}
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
-                    </li>
-                </ul>
-                {% endif %}
+            <div style="display: flex; gap: 20px;">
+                <a href="{{ url_for('home') }}" class="nav-link" style="color: var(--text-primary); font-size: 14px; font-weight: 500;">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <a href="{{ url_for('search') }}" class="nav-link" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
+                    <i class="fas fa-search"></i> Discover
+                </a>
+                <a href="{{ url_for('messages') }}" class="nav-link" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
             </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 16px;">
+            {% if current_user.is_authenticated %}
+            <a href="{{ url_for('new_post') }}" style="
+                background: var(--accent);
+                color: white;
+                padding: 8px 18px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+            ">
+                <i class="fas fa-plus"></i> Create
+            </a>
+            
+            <a href="{{ url_for('notifications') }}" style="color: var(--text-secondary); font-size: 18px; position: relative;">
+                <i class="fas fa-bell"></i>
+                <span id="notifBadgeDesktop" style="
+                    display: none;
+                    position: absolute;
+                    top: -6px;
+                    right: -8px;
+                    background: var(--accent);
+                    color: white;
+                    font-size: 9px;
+                    padding: 1px 5px;
+                    border-radius: 10px;
+                    font-weight: 700;
+                "></span>
+            </a>
+            
+            <a href="{{ url_for('profile') }}" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
+                     alt="{{ current_user.username }}"
+                     style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                <span style="color: var(--text-primary); font-size: 14px; font-weight: 500;">{{ current_user.username }}</span>
+            </a>
+            
+            <a href="{{ url_for('logout') }}" style="color: var(--text-secondary); font-size: 14px; text-decoration: none;">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" style="
+                background: transparent;
+                color: var(--text-primary);
+                padding: 8px 18px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+                border: 1px solid var(--border-color);
+            ">Log In</a>
+            
+            <a href="{{ url_for('register') }}" style="
+                background: var(--accent);
+                color: white;
+                padding: 8px 18px;
+                border-radius: 20px;
+                font-size: 13px;
+                font-weight: 600;
+                text-decoration: none;
+            ">Sign Up</a>
+            {% endif %}
         </div>
     </nav>
-
+    
     <!-- Flash Messages -->
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
-
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container" id="flashContainer">
+            {% for category, message in messages %}
+            <div class="flash-message {{ category }}">
+                {% if category == 'success' %}
+                <i class="fas fa-check-circle"></i>
+                {% elif category == 'danger' %}
+                <i class="fas fa-exclamation-circle"></i>
+                {% elif category == 'info' %}
+                <i class="fas fa-info-circle"></i>
+                {% elif category == 'warning' %}
+                <i class="fas fa-exclamation-triangle"></i>
+                {% endif %}
+                <span>{{ message }}</span>
+                <button class="flash-close" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+    
     <!-- Main Content -->
-    <main class="container py-4">
+    <main>
         {% block content %}{% endblock %}
     </main>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <h5><i class="fas fa-users"></i> Bantu Africa</h5>
-                    <p>Connect with your community. Share your stories.</p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <p>&copy; 2024 Bantu Africa. All rights reserved.</p>
-                    <p>
-                        <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="text-white me-3"><i class="fab fa-facebook"></i></a>
-                        <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block extra_js %}{% endblock %}
+    
+    <!-- Scripts -->
+    <script>
+        // ============ AUTO-DISMISS FLASH MESSAGES ============
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                setTimeout(() => {
+                    msg.style.opacity = '0';
+                    msg.style.transition = 'opacity 0.3s ease';
+                    setTimeout(() => msg.remove(), 300);
+                }, 4000);
+            });
+        });
+        
+        // ============ FOLLOW TOGGLE (Global) ============
+        async function toggleFollow(username, button) {
+            const isFollowing = button.classList.contains('following') || button.textContent.trim() === 'Following';
+            
+            // Optimistic update
+            if (isFollowing) {
+                button.classList.remove('following');
+                button.textContent = 'Follow';
+                button.style.background = 'var(--accent)';
+                button.style.color = 'white';
+                button.style.border = 'none';
+            } else {
+                button.classList.add('following');
+                button.textContent = 'Following';
+                button.style.background = 'var(--border-color)';
+                button.style.color = 'var(--text-primary)';
+                button.style.border = '1px solid var(--border-color)';
+            }
+            
+            try {
+                const endpoint = isFollowing ? `/unfollow/${username}` : `/follow/${username}`;
+                const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                const headers = {};
+                if (csrfMeta && csrfMeta.getAttribute('content')) {
+                    headers['X-CSRFToken'] = csrfMeta.getAttribute('content');
+                }
+                
+                const response = await fetch(endpoint, { headers });
+                
+                if (!response.ok) throw new Error('Failed');
+                
+            } catch (error) {
+                // Revert
+                if (isFollowing) {
+                    button.classList.add('following');
+                    button.textContent = 'Following';
+                } else {
+                    button.classList.remove('following');
+                    button.textContent = 'Follow';
+                }
+                showToast('Something went wrong. Try again.', 'error');
+            }
+        }
+        
+        // ============ TOAST NOTIFICATION ============
+        function showToast(message, type = 'success') {
+            let container = document.querySelector('.toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <i class="fas ${icons[type] || icons.info}" style="font-size: 18px;"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // ============ CHECK UNREAD NOTIFICATIONS ============
+        {% if current_user.is_authenticated %}
+        async function checkUnreadNotifications() {
+            try {
+                const response = await fetch('/api/notifications/unread-count');
+                if (response.ok) {
+                    const data = await response.json();
+                    const badges = document.querySelectorAll('#notifBadgeDesktop, #notifBadgeMobile');
+                    badges.forEach(badge => {
+                        if (data.count > 0) {
+                            badge.textContent = data.count > 9 ? '9+' : data.count;
+                            badge.style.display = 'inline';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    });
+                }
+            } catch (e) {
+                // Silently fail - notifications are non-critical
+            }
+        }
+        
+        // Check every 30 seconds
+        setInterval(checkUnreadNotifications, 30000);
+        document.addEventListener('DOMContentLoaded', checkUnreadNotifications);
+        {% endif %}
+    </script>
+    
+    {% block scripts %}{% endblock %}
 </body>
 </html>
