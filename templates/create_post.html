@@ -1,41 +1,722 @@
 {% extends "base.html" %}
-{% block title %}Create Post - Bantu Africa{% endblock %}
+
+{% block title %}Create Post | Bantu Africa{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Create New Post</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('new_post') }}" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="title" class="form-label">Title (Optional)</label>
-                        <input type="text" class="form-control" id="title" name="title" 
-                               placeholder="Add a title to your post...">
-                    </div>
-                    <div class="mb-3">
-                        <label for="content" class="form-label">Content <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="content" name="content" rows="5" 
-                                  placeholder="What's on your mind?" required></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="image" class="form-label">Add Image (Optional)</label>
-                        <input type="file" class="form-control" id="image" name="image" accept="image/*">
-                        <div class="form-text">Supported formats: JPG, PNG, GIF. Max size: 16MB</div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i> Publish Post
-                        </button>
-                        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
+<style>
+    .create-post-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px 16px 100px;
+        min-height: 100vh;
+        background: var(--bg-primary);
+    }
+
+    .create-post-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .create-post-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    .cancel-btn {
+        color: var(--text-secondary);
+        font-size: 14px;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+
+    .cancel-btn:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+    }
+
+    .user-info-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .user-info-bar img {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+
+    .user-info-bar .username {
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .user-info-bar .visibility {
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    /* Content Input */
+    .content-textarea {
+        width: 100%;
+        min-height: 150px;
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: 16px;
+        line-height: 1.6;
+        resize: vertical;
+        outline: none;
+        padding: 0;
+        font-family: inherit;
+    }
+
+    .content-textarea::placeholder {
+        color: var(--text-secondary);
+    }
+
+    /* Category Selector */
+    .category-section {
+        margin: 16px 0;
+    }
+
+    .category-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .category-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .category-chip {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        user-select: none;
+    }
+
+    .category-chip:hover {
+        border-color: var(--accent);
+        color: var(--text-primary);
+    }
+
+    .category-chip.selected {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+
+    .category-chip i {
+        margin-right: 4px;
+        font-size: 12px;
+    }
+
+    /* Media Upload Zone */
+    .media-upload-section {
+        margin-top: 20px;
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        transition: all 0.2s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .media-upload-section:hover {
+        border-color: var(--accent);
+        background: rgba(255, 45, 85, 0.03);
+    }
+
+    .media-upload-section.has-media {
+        border-style: solid;
+        border-color: var(--accent);
+        padding: 12px;
+    }
+
+    .upload-icon {
+        font-size: 48px;
+        color: var(--text-secondary);
+        margin-bottom: 12px;
+    }
+
+    .upload-text {
+        font-size: 15px;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .upload-hint {
+        font-size: 12px;
+        color: var(--text-secondary);
+        opacity: 0.7;
+    }
+
+    /* Preview Container */
+    .media-preview-container {
+        position: relative;
+        display: none;
+        margin-top: 12px;
+    }
+
+    .media-preview-container.active {
+        display: block;
+    }
+
+    .media-preview {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 12px;
+        background: #000;
+    }
+
+    .media-preview video {
+        width: 100%;
+        max-height: 400px;
+        border-radius: 12px;
+    }
+
+    .remove-media-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        font-size: 14px;
+        backdrop-filter: blur(4px);
+        transition: background 0.2s;
+    }
+
+    .remove-media-btn:hover {
+        background: var(--accent);
+    }
+
+    .video-duration-badge {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Post Button */
+    .post-submit-section {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px var(--safe-bottom, 20px);
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        z-index: 100;
+    }
+
+    .post-submit-inner {
+        max-width: 600px;
+        margin: 0 auto;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .post-submit-btn {
+        flex: 1;
+        padding: 14px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--accent);
+        color: white;
+    }
+
+    .post-submit-btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+
+    .post-submit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .draft-btn {
+        padding: 14px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    /* Progress bar for upload */
+    .upload-progress {
+        display: none;
+        width: 100%;
+        height: 4px;
+        background: var(--bg-card);
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+
+    .upload-progress.active {
+        display: block;
+    }
+
+    .upload-progress-fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 2px;
+        transition: width 0.3s;
+        width: 0%;
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+        .create-post-container {
+            padding: 12px 12px 100px;
+        }
+        
+        .content-textarea {
+            font-size: 15px;
+            min-height: 120px;
+        }
+        
+        .category-chips {
+            gap: 6px;
+        }
+        
+        .category-chip {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="create-post-container">
+    <!-- Header -->
+    <div class="create-post-header">
+        <h3>Create Post</h3>
+        <a href="{{ url_for('home') }}" class="cancel-btn">
+            <i class="fas fa-times"></i> Cancel
+        </a>
+    </div>
+
+    <!-- User Info -->
+    <div class="user-info-bar">
+        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
+             alt="{{ current_user.username }}"
+             onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        <div>
+            <div class="username">{{ current_user.username }}</div>
+            <div class="visibility">
+                <i class="fas fa-globe-africa"></i> Public
             </div>
         </div>
     </div>
+
+    <!-- Post Form -->
+    <form method="POST" action="{{ url_for('new_post') }}" enctype="multipart/form-data" id="postForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+        
+        <!-- Content -->
+        <textarea 
+            name="content" 
+            class="content-textarea" 
+            placeholder="What's happening in your community?"
+            maxlength="5000"
+            id="postContent"
+            required
+        >{{ request.form.get('content', '') }}</textarea>
+        
+        <!-- Character count -->
+        <div style="text-align: right; font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+            <span id="charCount">0</span>/5000
+        </div>
+
+        <!-- Category Selection -->
+        <div class="category-section">
+            <span class="category-label">Category</span>
+            <div class="category-chips" id="categoryChips">
+                <div class="category-chip selected" data-category="general">
+                    <i class="fas fa-globe"></i> General
+                </div>
+                <div class="category-chip" data-category="music">
+                    <i class="fas fa-music"></i> Music
+                </div>
+                <div class="category-chip" data-category="sports">
+                    <i class="fas fa-futbol"></i> Sports
+                </div>
+                <div class="category-chip" data-category="news">
+                    <i class="fas fa-newspaper"></i> News
+                </div>
+                <div class="category-chip" data-category="entertainment">
+                    <i class="fas fa-film"></i> Entertainment
+                </div>
+                <div class="category-chip" data-category="tech">
+                    <i class="fas fa-microchip"></i> Tech
+                </div>
+                <div class="category-chip" data-category="fashion">
+                    <i class="fas fa-tshirt"></i> Fashion
+                </div>
+                <div class="category-chip" data-category="food">
+                    <i class="fas fa-utensils"></i> Food
+                </div>
+                <div class="category-chip" data-category="travel">
+                    <i class="fas fa-plane"></i> Travel
+                </div>
+            </div>
+            <input type="hidden" name="category" value="general" id="categoryInput">
+        </div>
+
+        <!-- Media Upload Zone -->
+        <div class="media-upload-section" id="mediaUploadZone" onclick="document.getElementById('mediaInput').click()">
+            <div id="uploadPlaceholder">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">Add Photos or Videos</div>
+                <div class="upload-hint">JPG, PNG, GIF, MP4, MOV, WebM • Max 100MB</div>
+            </div>
+            
+            <!-- Hidden file inputs -->
+            <input type="file" id="mediaInput" accept="image/*,video/*" 
+                   style="display: none;" 
+                   onchange="handleMediaSelect(this)">
+            
+            <!-- Upload progress -->
+            <div class="upload-progress" id="uploadProgress">
+                <div class="upload-progress-fill" id="uploadProgressFill"></div>
+            </div>
+        </div>
+
+        <!-- Media Preview -->
+        <div class="media-preview-container" id="mediaPreviewContainer">
+            <div id="mediaPreview"></div>
+            <button type="button" class="remove-media-btn" onclick="removeMedia()" title="Remove media">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="video-duration-badge" id="videoDurationBadge" style="display: none;"></div>
+        </div>
+    </form>
 </div>
+
+<!-- Fixed Bottom Submit Bar -->
+<div class="post-submit-section">
+    <div class="post-submit-inner">
+        <button type="button" class="draft-btn" onclick="saveDraft()" title="Save as draft">
+            <i class="far fa-save"></i> Draft
+        </button>
+        <button type="submit" class="post-submit-btn" form="postForm" id="submitBtn">
+            <i class="fas fa-paper-plane"></i> Post
+        </button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ============ CATEGORY SELECTION ============
+    const categoryChips = document.querySelectorAll('.category-chip');
+    const categoryInput = document.getElementById('categoryInput');
+    
+    categoryChips.forEach(chip => {
+        chip.addEventListener('click', function(e) {
+            e.stopPropagation();
+            categoryChips.forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            categoryInput.value = this.getAttribute('data-category');
+        });
+    });
+
+    // ============ CHARACTER COUNT ============
+    const postContent = document.getElementById('postContent');
+    const charCount = document.getElementById('charCount');
+    
+    postContent.addEventListener('input', function() {
+        const count = this.value.length;
+        charCount.textContent = count;
+        if (count > 4500) {
+            charCount.style.color = 'var(--accent)';
+        } else {
+            charCount.style.color = 'var(--text-secondary)';
+        }
+    });
+    
+    // Initialize count
+    charCount.textContent = postContent.value.length;
+
+    // ============ MEDIA HANDLING ============
+    let selectedFile = null;
+    const mediaUploadZone = document.getElementById('mediaUploadZone');
+    const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+    const mediaPreviewContainer = document.getElementById('mediaPreviewContainer');
+    const mediaPreview = document.getElementById('mediaPreview');
+    const videoDurationBadge = document.getElementById('videoDurationBadge');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadProgressFill = document.getElementById('uploadProgressFill');
+
+    function handleMediaSelect(input) {
+        const file = input.files[0];
+        if (!file) return;
+        
+        // Validate file size (100MB)
+        if (file.size > 100 * 1024 * 1024) {
+            showToast('File is too large. Maximum size is 100MB.', 'error');
+            input.value = '';
+            return;
+        }
+        
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+                            'video/mp4', 'video/quicktime', 'video/webm'];
+        if (!allowedTypes.includes(file.type)) {
+            showToast('Unsupported file type. Please upload JPG, PNG, GIF, MP4, MOV, or WebM.', 'error');
+            input.value = '';
+            return;
+        }
+        
+        selectedFile = file;
+        
+        // Show progress
+        uploadProgress.classList.add('active');
+        uploadProgressFill.style.width = '30%';
+        
+        const reader = new FileReader();
+        reader.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                uploadProgressFill.style.width = percent + '%';
+            }
+        };
+        
+        reader.onload = function(e) {
+            uploadProgressFill.style.width = '100%';
+            
+            setTimeout(() => {
+                uploadProgress.classList.remove('active');
+                uploadProgressFill.style.width = '0%';
+                
+                // Show preview
+                mediaUploadZone.classList.add('has-media');
+                uploadPlaceholder.style.display = 'none';
+                mediaPreviewContainer.classList.add('active');
+                
+                if (file.type.startsWith('video/')) {
+                    mediaPreview.innerHTML = `
+                        <video src="${e.target.result}" controls class="media-preview" id="videoPreview"></video>
+                    `;
+                    
+                    // Get video duration
+                    const video = document.getElementById('videoPreview');
+                    video.onloadedmetadata = function() {
+                        const duration = Math.round(video.duration);
+                        const minutes = Math.floor(duration / 60);
+                        const seconds = duration % 60;
+                        videoDurationBadge.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        videoDurationBadge.style.display = 'block';
+                    };
+                } else {
+                    mediaPreview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview" class="media-preview">
+                    `;
+                    videoDurationBadge.style.display = 'none';
+                }
+            }, 300);
+        };
+        
+        reader.readAsDataURL(file);
+    }
+
+    function removeMedia() {
+        selectedFile = null;
+        document.getElementById('mediaInput').value = '';
+        mediaPreviewContainer.classList.remove('active');
+        mediaPreview.innerHTML = '';
+        mediaUploadZone.classList.remove('has-media');
+        uploadPlaceholder.style.display = 'block';
+        videoDurationBadge.style.display = 'none';
+        uploadProgress.classList.remove('active');
+        uploadProgressFill.style.width = '0%';
+    }
+
+    // ============ DRAG AND DROP ============
+    mediaUploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--accent)';
+        this.style.background = 'rgba(255, 45, 85, 0.05)';
+    });
+
+    mediaUploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--border-color)';
+        this.style.background = 'transparent';
+        if (this.classList.contains('has-media')) {
+            this.style.borderColor = 'var(--accent)';
+        }
+    });
+
+    mediaUploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--border-color)';
+        this.style.background = 'transparent';
+        
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const input = document.getElementById('mediaInput');
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+            handleMediaSelect(input);
+        }
+    });
+
+    // ============ DRAFT SAVING ============
+    function saveDraft() {
+        const content = postContent.value.trim();
+        const category = categoryInput.value;
+        
+        if (!content && !selectedFile) {
+            showToast('Nothing to save as draft.', 'info');
+            return;
+        }
+        
+        const draft = {
+            content: content,
+            category: category,
+            timestamp: new Date().toISOString()
+        };
+        
+        // Save to localStorage
+        const drafts = JSON.parse(localStorage.getItem('bantu_drafts') || '[]');
+        drafts.unshift(draft);
+        localStorage.setItem('bantu_drafts', JSON.stringify(drafts.slice(0, 10))); // Keep last 10
+        
+        showToast('Draft saved!', 'success');
+    }
+
+    // Load draft if exists
+    function loadLastDraft() {
+        const drafts = JSON.parse(localStorage.getItem('bantu_drafts') || '[]');
+        if (drafts.length > 0 && !postContent.value) {
+            const lastDraft = drafts[0];
+            postContent.value = lastDraft.content || '';
+            if (lastDraft.category) {
+                categoryInput.value = lastDraft.category;
+                categoryChips.forEach(chip => {
+                    chip.classList.remove('selected');
+                    if (chip.getAttribute('data-category') === lastDraft.category) {
+                        chip.classList.add('selected');
+                    }
+                });
+            }
+            charCount.textContent = postContent.value.length;
+        }
+    }
+
+    // ============ FORM SUBMISSION ============
+    const postForm = document.getElementById('postForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    postForm.addEventListener('submit', function(e) {
+        const content = postContent.value.trim();
+        
+        if (!content && !selectedFile) {
+            e.preventDefault();
+            showToast('Please add some content or media to your post.', 'error');
+            return false;
+        }
+        
+        // Disable button to prevent double submission
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+        
+        return true;
+    });
+
+    // ============ KEYBOARD SHORTCUTS ============
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Enter to submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            postForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+
+    // ============ INITIALIZATION ============
+    document.addEventListener('DOMContentLoaded', function() {
+        loadLastDraft();
+        
+        // Focus textarea
+        postContent.focus();
+        
+        // If returning from error, restore category
+        const savedCategory = '{{ request.form.get("category", "general") }}';
+        if (savedCategory && savedCategory !== 'general') {
+            categoryChips.forEach(chip => {
+                chip.classList.remove('selected');
+                if (chip.getAttribute('data-category') === savedCategory) {
+                    chip.classList.add('selected');
+                }
+            });
+            categoryInput.value = savedCategory;
+        }
+    });
+
+    // Handle browser back button with unsaved content
+    window.addEventListener('beforeunload', function(e) {
+        if (postContent.value.trim() || selectedFile) {
+            // Modern browsers ignore custom messages, but this triggers the dialog
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+</script>
 {% endblock %}
