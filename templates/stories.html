@@ -1,0 +1,399 @@
+{% extends "base.html" %}
+
+{% block title %}Stories | Bantu Africa{% endblock %}
+
+{% block content %}
+<style>
+    .stories-container {
+        height: 100vh;
+        height: 100dvh;
+        background: #000;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .story-slide {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .story-slide.active {
+        opacity: 1;
+    }
+    
+    .story-slide img,
+    .story-slide video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+    
+    .story-progress-bar {
+        position: absolute;
+        top: 12px;
+        left: 8px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+        z-index: 10;
+    }
+    
+    .progress-segment {
+        flex: 1;
+        height: 3px;
+        background: rgba(255,255,255,0.3);
+        border-radius: 2px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: white;
+        width: 0%;
+        transition: width 0.1s linear;
+    }
+    
+    .progress-fill.completed {
+        width: 100%;
+    }
+    
+    .story-header {
+        position: absolute;
+        top: 25px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 10;
+    }
+    
+    .story-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+    
+    .story-username {
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    
+    .story-time {
+        color: rgba(255,255,255,0.7);
+        font-size: 12px;
+    }
+    
+    .story-close {
+        position: absolute;
+        top: 20px;
+        right: 16px;
+        color: white;
+        font-size: 24px;
+        z-index: 10;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .story-tap-zones {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        z-index: 5;
+    }
+    
+    .tap-zone-left {
+        flex: 1;
+    }
+    
+    .tap-zone-right {
+        flex: 2;
+    }
+    
+    .story-reply-bar {
+        position: absolute;
+        bottom: 30px;
+        left: 16px;
+        right: 16px;
+        z-index: 10;
+    }
+    
+    .story-reply-input {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 25px;
+        border: 1px solid rgba(255,255,255,0.3);
+        background: rgba(0,0,0,0.5);
+        color: white;
+        font-size: 14px;
+        outline: none;
+        backdrop-filter: blur(10px);
+    }
+    
+    .story-reply-input::placeholder {
+        color: rgba(255,255,255,0.6);
+    }
+</style>
+
+<div class="stories-container" id="storiesContainer">
+    <!-- Close Button -->
+    <button class="story-close" onclick="closeStories()">
+        <i class="fas fa-times"></i>
+    </button>
+    
+    {% if stories %}
+        <!-- Progress Bars -->
+        <div class="story-progress-bar" id="progressBar">
+            {% for story in stories %}
+            <div class="progress-segment">
+                <div class="progress-fill" data-index="{{ loop.index0 }}"></div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Story Header -->
+        <div class="story-header">
+            <img src="{{ url_for('static', filename='uploads/' + story_owner.profile_image) }}" 
+                 alt="{{ story_owner.username }}"
+                 class="story-user-avatar">
+            <div>
+                <div class="story-username">{{ story_owner.username }}</div>
+                <div class="story-time" id="storyTime">Just now</div>
+            </div>
+        </div>
+        
+        <!-- Story Slides -->
+        {% for story in stories %}
+        <div class="story-slide" data-index="{{ loop.index0 }}" id="slide{{ loop.index0 }}">
+            {% if story.video %}
+            <video src="{{ url_for('static', filename='uploads/' + story.video) }}" 
+                   muted playsinline preload="auto"
+                   id="video{{ loop.index0 }}"></video>
+            {% elif story.image %}
+            <img src="{{ url_for('static', filename='uploads/' + story.image) }}" 
+                 alt="Story"
+                 loading="eager">
+            {% endif %}
+            
+            {% if story.caption %}
+            <div style="position: absolute; bottom: 100px; left: 16px; right: 16px; color: white; text-align: center; font-size: 16px; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">
+                {{ story.caption }}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        
+        <!-- Tap Zones -->
+        <div class="story-tap-zones">
+            <div class="tap-zone-left" onclick="previousStory()"></div>
+            <div class="tap-zone-right" onclick="nextStory()"></div>
+        </div>
+        
+        <!-- Reply Bar -->
+        <div class="story-reply-bar">
+            <input type="text" 
+                   class="story-reply-input" 
+                   placeholder="Send message..."
+                   id="storyReply"
+                   onkeypress="if(event.key==='Enter')sendStoryReply()">
+        </div>
+    {% else %}
+        <!-- No Stories State -->
+        <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px;">
+            <div>
+                <i class="fas fa-clock" style="font-size: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
+                <h2 style="color: white; margin-bottom: 8px;">No Stories</h2>
+                <p style="color: var(--text-secondary);">Create your first story to share with followers</p>
+                <a href="/stories/create" class="btn-follow" style="display: inline-block; margin-top: 16px;">
+                    <i class="fas fa-plus-circle"></i> Create Story
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Hidden CSRF token -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if stories %}
+let currentStoryIndex = 0;
+const totalStories = {{ stories|length }};
+let storyTimer;
+let isPaused = false;
+const STORY_DURATION = 5000; // 5 seconds per story
+
+function initializeStories() {
+    showStory(0);
+    startProgress();
+}
+
+function showStory(index) {
+    // Hide all slides
+    document.querySelectorAll('.story-slide').forEach(s => s.classList.remove('active'));
+    
+    // Show current slide
+    const slide = document.getElementById('slide' + index);
+    if (slide) {
+        slide.classList.add('active');
+        currentStoryIndex = index;
+        
+        // Handle video
+        const video = slide.querySelector('video');
+        if (video) {
+            video.currentTime = 0;
+            video.play();
+            STORY_DURATION = video.duration * 1000 || 5000;
+        }
+        
+        // Update time
+        document.getElementById('storyTime').textContent = 'Just now';
+        
+        // Reset progress
+        resetProgress();
+    }
+}
+
+function nextStory() {
+    // Mark current as completed
+    markProgressComplete(currentStoryIndex);
+    
+    if (currentStoryIndex < totalStories - 1) {
+        showStory(currentStoryIndex + 1);
+    } else {
+        // All stories viewed, go to next user or close
+        loadNextUserStories();
+    }
+}
+
+function previousStory() {
+    if (currentStoryIndex > 0) {
+        // Un-mark previous
+        unmarkProgress(currentStoryIndex);
+        showStory(currentStoryIndex - 1);
+    }
+}
+
+function startProgress() {
+    clearInterval(storyTimer);
+    let progress = 0;
+    const segment = document.querySelectorAll('.progress-fill')[currentStoryIndex];
+    
+    storyTimer = setInterval(() => {
+        if (!isPaused && segment) {
+            progress += 50;
+            const percent = (progress / STORY_DURATION) * 100;
+            segment.style.width = Math.min(percent, 100) + '%';
+            
+            if (progress >= STORY_DURATION) {
+                clearInterval(storyTimer);
+                nextStory();
+            }
+        }
+    }, 50);
+}
+
+function resetProgress() {
+    clearInterval(storyTimer);
+    document.querySelectorAll('.progress-fill').forEach((fill, i) => {
+        if (i < currentStoryIndex) {
+            fill.classList.add('completed');
+            fill.style.width = '100%';
+        } else if (i === currentStoryIndex) {
+            fill.classList.remove('completed');
+            fill.style.width = '0%';
+        } else {
+            fill.classList.remove('completed');
+            fill.style.width = '0%';
+        }
+    });
+    startProgress();
+}
+
+function markProgressComplete(index) {
+    const fill = document.querySelectorAll('.progress-fill')[index];
+    if (fill) {
+        fill.classList.add('completed');
+        fill.style.width = '100%';
+    }
+}
+
+function unmarkProgress(index) {
+    const fill = document.querySelectorAll('.progress-fill')[index];
+    if (fill) {
+        fill.classList.remove('completed');
+        fill.style.width = '0%';
+    }
+}
+
+function closeStories() {
+    window.location.href = '/';
+}
+
+function loadNextUserStories() {
+    // In a full implementation, this would fetch the next user's stories
+    // For now, close the viewer
+    closeStories();
+}
+
+function sendStoryReply() {
+    const input = document.getElementById('storyReply');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    // Send reply via fetch
+    const storyOwner = '{{ story_owner.username if story_owner else "" }}';
+    fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            recipient: storyOwner,
+            message: message,
+            is_story_reply: true
+        })
+    }).then(response => {
+        if (response.ok) {
+            input.value = '';
+            showToast('Reply sent!', 'success');
+        }
+    }).catch(() => {
+        showToast('Failed to send reply', 'error');
+    });
+}
+
+// Pause on touch hold
+document.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.tap-zone-left') || e.target.closest('.tap-zone-right')) {
+        isPaused = true;
+    }
+});
+
+document.addEventListener('touchend', () => {
+    isPaused = false;
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') nextStory();
+    if (e.key === 'ArrowLeft') previousStory();
+    if (e.key === 'Escape') closeStories();
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', initializeStories);
+{% endif %}
+</script>
+{% endblock %}
