@@ -17,10 +17,18 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 if not app.config['SECRET_KEY']:
     raise RuntimeError("SECRET_KEY environment variable is required. Add it in Render Dashboard → Environment.")
 
-# Database configuration
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///bantu.db')
-if database_url and database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+# Database configuration - FORCE PostgreSQL when DATABASE_URL is present
+database_url = os.environ.get('DATABASE_URL')
+if not database_url:
+    # Local development fallback only
+    print("⚠️ No DATABASE_URL found. Using local SQLite (development only).")
+    database_url = 'sqlite:///bantu.db'
+else:
+    # Fix postgres:// to postgresql:// if needed
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    print(f"✅ Using PostgreSQL database")
+
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
