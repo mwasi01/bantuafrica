@@ -1,70 +1,554 @@
 {% extends "base.html" %}
-{% block title %}Welcome to Bantu Africa{% endblock %}
+
+{% block title %}Bantu Africa - Connect, Share, Build Community{% endblock %}
 
 {% block content %}
-<div class="hero-section text-center py-5">
-    <div class="container">
-        <h1 class="display-4 mb-4">Welcome to <span class="text-primary">Bantu Africa</span></h1>
-        <p class="lead mb-4">Connect with your community. Share stories. Build relationships.</p>
-        
-        {% if not current_user.is_authenticated %}
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-body p-5">
-                        <h3 class="card-title mb-4">Join our community today</h3>
-                        <div class="row mt-4">
-                            <div class="col-md-6">
-                                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg w-100 mb-3">
-                                    <i class="fas fa-user-plus"></i> Create Account
-                                </a>
-                            </div>
-                            <div class="col-md-6">
-                                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg w-100">
-                                    <i class="fas fa-sign-in-alt"></i> Sign In
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
+<style>
+    /* ============ HERO SECTION ============ */
+    .hero-section {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 40px 20px;
+        background: radial-gradient(ellipse at center, #1a1a2e 0%, #000000 70%);
+        position: relative;
+        overflow: hidden;
+    }
 
-<div class="features-section py-5 bg-light">
-    <div class="container">
-        <h2 class="text-center mb-5">Why Choose Bantu Africa?</h2>
-        <div class="row">
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
-                        <h4>Community Focused</h4>
-                        <p>Connect with people in your local community and across Africa.</p>
-                    </div>
-                </div>
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle at 30% 50%, rgba(255, 45, 85, 0.08) 0%, transparent 50%),
+                    radial-gradient(circle at 70% 30%, rgba(0, 122, 255, 0.06) 0%, transparent 50%);
+        animation: heroGlow 8s ease-in-out infinite alternate;
+    }
+
+    @keyframes heroGlow {
+        0% { transform: translate(0, 0); }
+        100% { transform: translate(-5%, 3%); }
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 700px;
+    }
+
+    .hero-logo {
+        font-size: 64px;
+        margin-bottom: 16px;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-12px); }
+    }
+
+    .hero-title {
+        font-size: 48px;
+        font-weight: 800;
+        margin-bottom: 16px;
+        background: linear-gradient(135deg, #ff2d55, #ff6b6b, #ff8e53);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.2;
+    }
+
+    @media (max-width: 600px) {
+        .hero-title {
+            font-size: 32px;
+        }
+        .hero-logo {
+            font-size: 48px;
+        }
+    }
+
+    .hero-subtitle {
+        font-size: 18px;
+        color: var(--text-secondary);
+        margin-bottom: 32px;
+        line-height: 1.6;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-buttons {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary-hero {
+        background: var(--accent);
+        color: white;
+        padding: 14px 32px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.3s;
+        box-shadow: 0 8px 30px rgba(255, 45, 85, 0.3);
+    }
+
+    .btn-primary-hero:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(255, 45, 85, 0.5);
+        color: white;
+    }
+
+    .btn-secondary-hero {
+        background: transparent;
+        color: var(--text-primary);
+        padding: 14px 32px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 2px solid var(--border-color);
+        transition: all 0.3s;
+    }
+
+    .btn-secondary-hero:hover {
+        border-color: var(--text-primary);
+        color: var(--text-primary);
+    }
+
+    .hero-stats {
+        display: flex;
+        gap: 40px;
+        justify-content: center;
+        margin-top: 50px;
+        flex-wrap: wrap;
+    }
+
+    .hero-stat {
+        text-align: center;
+    }
+
+    .hero-stat-number {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--accent);
+        display: block;
+    }
+
+    .hero-stat-label {
+        font-size: 13px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* ============ FEATURES SECTION ============ */
+    .features-section {
+        padding: 80px 20px;
+        background: var(--bg-primary);
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 60px;
+    }
+
+    .section-header h2 {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 12px;
+    }
+
+    .section-header p {
+        font-size: 16px;
+        color: var(--text-secondary);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .feature-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 40px 28px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-6px);
+        border-color: var(--accent);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 30px;
+    }
+
+    .feature-icon.community {
+        background: rgba(255, 45, 85, 0.15);
+        color: var(--accent);
+    }
+
+    .feature-icon.stories {
+        background: rgba(0, 122, 255, 0.15);
+        color: #007aff;
+    }
+
+    .feature-icon.safe {
+        background: rgba(76, 175, 80, 0.15);
+        color: #4caf50;
+    }
+
+    .feature-icon.global {
+        background: rgba(255, 149, 0, 0.15);
+        color: #ff9500;
+    }
+
+    .feature-icon.video {
+        background: rgba(175, 82, 222, 0.15);
+        color: #af52de;
+    }
+
+    .feature-icon.realtime {
+        background: rgba(0, 204, 204, 0.15);
+        color: #00cccc;
+    }
+
+    .feature-card h3 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .feature-card p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    /* ============ HOW IT WORKS ============ */
+    .how-section {
+        padding: 80px 20px;
+        background: var(--bg-secondary);
+    }
+
+    .steps-container {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+    }
+
+    .step-item {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+    }
+
+    .step-number {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        font-size: 20px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .step-content h4 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .step-content p {
+        font-size: 14px;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+
+    /* ============ CTA SECTION ============ */
+    .cta-section {
+        padding: 100px 20px;
+        text-align: center;
+        background: linear-gradient(135deg, #1a1a2e 0%, #0d0d1a 100%);
+    }
+
+    .cta-section h2 {
+        font-size: 36px;
+        font-weight: 800;
+        margin-bottom: 16px;
+    }
+
+    .cta-section p {
+        font-size: 16px;
+        color: var(--text-secondary);
+        margin-bottom: 32px;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* ============ FOOTER ============ */
+    .landing-footer {
+        padding: 40px 20px;
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+    }
+
+    .footer-links {
+        display: flex;
+        gap: 24px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .footer-links a {
+        color: var(--text-secondary);
+        font-size: 13px;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+        color: var(--text-primary);
+    }
+
+    .footer-copyright {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+</style>
+
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-content">
+        <div class="hero-logo">🌍</div>
+        <h1 class="hero-title">Welcome to Bantu Africa</h1>
+        <p class="hero-subtitle">
+            Connect with your community, share your stories, and build meaningful relationships 
+            across Africa and beyond. Your voice matters here.
+        </p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn-primary-hero">
+                <i class="fas fa-user-plus"></i> Join Now — It's Free
+            </a>
+            <a href="{{ url_for('login') }}" class="btn-secondary-hero">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <span class="hero-stat-number">10K+</span>
+                <span class="hero-stat-label">Community Members</span>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-share-alt fa-3x text-primary mb-3"></i>
-                        <h4>Share Stories</h4>
-                        <p>Share your experiences, photos, and moments with your network.</p>
-                    </div>
-                </div>
+            <div class="hero-stat">
+                <span class="hero-stat-number">54</span>
+                <span class="hero-stat-label">African Countries</span>
             </div>
-            <div class="col-md-4 mb-4">
-                <div class="card h-100 text-center">
-                    <div class="card-body">
-                        <i class="fas fa-lock fa-3x text-primary mb-3"></i>
-                        <h4>Safe Space</h4>
-                        <p>A secure platform built with privacy and safety in mind.</p>
-                    </div>
-                </div>
+            <div class="hero-stat">
+                <span class="hero-stat-number">1M+</span>
+                <span class="hero-stat-label">Stories Shared</span>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section">
+    <div class="section-header">
+        <h2>Why Bantu Africa?</h2>
+        <p>A platform built for connection, creativity, and community</p>
+    </div>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon community">
+                <i class="fas fa-users"></i>
+            </div>
+            <h3>Community Focused</h3>
+            <p>Connect with people in your local community and across the African continent. Find your tribe and build lasting relationships.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon stories">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <h3>Share Your Stories</h3>
+            <p>Share experiences, photos, videos, and moments that matter. Your story deserves to be heard by the world.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon safe">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3>Safe & Private Space</h3>
+            <p>A secure platform built with your privacy and safety in mind. Control who sees your content and interact with confidence.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon video">
+                <i class="fas fa-video"></i>
+            </div>
+            <h3>Video & Reels</h3>
+            <p>Create and share short-form videos. Express yourself creatively with our powerful video tools and reach a wider audience.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon realtime">
+                <i class="fas fa-comments"></i>
+            </div>
+            <h3>Real-Time Messaging</h3>
+            <p>Chat instantly with friends and community members. Share images, have group conversations, and stay connected always.</p>
+        </div>
+        
+        <div class="feature-card">
+            <div class="feature-icon global">
+                <i class="fas fa-globe-africa"></i>
+            </div>
+            <h3>Pan-African Reach</h3>
+            <p>Connect across borders. Bantu Africa brings together diverse cultures, languages, and perspectives from across the continent.</p>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="how-section">
+    <div class="section-header">
+        <h2>How It Works</h2>
+        <p>Get started in three simple steps</p>
+    </div>
+    <div class="steps-container">
+        <div class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-content">
+                <h4>Create Your Profile</h4>
+                <p>Sign up in seconds. Add your photo, bio, and interests to let the community know who you are.</p>
+            </div>
+        </div>
+        
+        <div class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-content">
+                <h4>Connect With Others</h4>
+                <p>Follow friends, discover new voices, and join conversations that matter to you. Find your community.</p>
+            </div>
+        </div>
+        
+        <div class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-content">
+                <h4>Share & Engage</h4>
+                <p>Post your stories, photos, and videos. Like, comment, and share to keep the conversation going.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta-section">
+    <h2>Ready to Join the Community?</h2>
+    <p>Thousands of Africans are already connecting, sharing, and building together. Don't miss out.</p>
+    <a href="{{ url_for('register') }}" class="btn-primary-hero">
+        <i class="fas fa-rocket"></i> Get Started Free
+    </a>
+</section>
+
+<!-- Footer -->
+<footer class="landing-footer">
+    <div class="footer-links">
+        <a href="#">About Us</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact</a>
+        <a href="#">Help Center</a>
+    </div>
+    <p class="footer-copyright">
+        &copy; {{ now().year if now else '2025' }} Bantu Africa. Made with ❤️ for Africa.
+    </p>
+</footer>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Smooth scroll animation for elements
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate elements on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+        
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = `all 0.6s ease ${index * 0.1}s`;
+            observer.observe(card);
+        });
+        
+        // Observe step items
+        document.querySelectorAll('.step-item').forEach((step, index) => {
+            step.style.opacity = '0';
+            step.style.transform = 'translateX(-30px)';
+            step.style.transition = `all 0.6s ease ${index * 0.15}s`;
+            observer.observe(step);
+        });
+        
+        // Observe stats
+        document.querySelectorAll('.hero-stat').forEach((stat, index) => {
+            stat.style.opacity = '0';
+            stat.style.transform = 'translateY(20px)';
+            stat.style.transition = `all 0.5s ease ${0.5 + index * 0.15}s`;
+            observer.observe(stat);
+        });
+        
+        // Trigger hero stats animation immediately
+        setTimeout(() => {
+            document.querySelectorAll('.hero-stat').forEach(stat => {
+                stat.style.opacity = '1';
+                stat.style.transform = 'translateY(0)';
+            });
+        }, 300);
+    });
+</script>
 {% endblock %}
