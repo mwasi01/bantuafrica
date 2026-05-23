@@ -44,16 +44,17 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# CSRF protection - conditional to avoid issues if package not installed
+# CSRF protection
+csrf = None
 try:
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
     print("✅ CSRF protection enabled")
 except ImportError:
     print("⚠️ Flask-WTF not installed. CSRF protection disabled.")
-    csrf = None
 
-# Rate limiting - conditional to avoid issues if package not installed
+# Rate limiting
+limiter = None
 try:
     from flask_limiter import Limiter
     from flask_limiter.util import get_remote_address
@@ -66,12 +67,8 @@ try:
     print("✅ Rate limiting enabled")
 except ImportError:
     print("⚠️ Flask-Limiter not installed. Rate limiting disabled.")
-    limiter = type('DummyLimiter', (), {
-        'limit': lambda *args, **kwargs: lambda f: f
-    })()
-    get_remote_address = lambda: '127.0.0.1'
 
-# Create upload folder and default image if they don't exist
+# Create upload folder and default image
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 default_image_path = os.path.join(UPLOAD_FOLDER, 'default.jpg')
 if not os.path.exists(default_image_path):
@@ -94,7 +91,6 @@ class User(db.Model, UserMixin):
     location = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # Relationships
     posts = db.relationship('Post', backref='author', lazy=True, cascade="all, delete-orphan")
     likes = db.relationship('Like', backref='user', lazy=True, cascade="all, delete-orphan")
     comments = db.relationship('Comment', backref='author', lazy=True, cascade="all, delete-orphan")
@@ -104,7 +100,6 @@ class User(db.Model, UserMixin):
     messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade="all, delete-orphan")
     messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy=True, cascade="all, delete-orphan")
     
-    # Followers/Following
     following = db.relationship('Follow',
                                foreign_keys='Follow.follower_id',
                                backref='follower',
@@ -147,7 +142,6 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
-    # Relationships
     likes = db.relationship('Like', backref='post', lazy=True, cascade="all, delete-orphan")
     comments = db.relationship('Comment', backref='post', lazy=True, cascade="all, delete-orphan")
     
@@ -202,7 +196,6 @@ class Like(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
     __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='unique_like'),)
 
 class Comment(db.Model):
@@ -217,7 +210,6 @@ class Follow(db.Model):
     follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     followed_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 class UserInterest(db.Model):
@@ -316,7 +308,6 @@ def save_picture(form_picture):
     return picture_fn
 
 def save_video(file):
-    """Save video, generate thumbnail, and get duration - safely handles missing ffmpeg"""
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(file.filename)
     video_fn = random_hex + f_ext
@@ -355,7 +346,6 @@ def save_video(file):
     return video_fn, thumbnail_fn, duration
 
 def update_user_interests(user, post):
-    """Update user interest weights based on post engagement"""
     if post and post.category:
         try:
             interest = UserInterest.query.filter_by(
@@ -379,7 +369,6 @@ def update_user_interests(user, post):
             print(f"Error updating interests: {e}")
 
 def create_notification(user, actor, notif_type, post=None, message='', target_url=''):
-    """Create a notification for a user"""
     try:
         if user.id == actor.id:
             return
@@ -402,14 +391,16 @@ def create_notification(user, actor, notif_type, post=None, message='', target_u
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ============ CONTEXT PROCESSOR ============
+# ============ CONTEXT PROCESSOR (CSRF FIX) ============
 
 @app.context_processor
 def utility_processor():
-    """Add common variables to all templates"""
-    def csrf_token():
+    def get_csrf_token():
+        if csrf:
+            from flask_wtf.csrf import generate_csrf
+            return generate_csrf()
         return ''
-    return dict(csrf_token=csrf_token)
+    return dict(csrf_token=get_csrf_token)
 
 # ============ ROUTES ============
 
@@ -703,7 +694,6 @@ def like_post(post_id):
             return jsonify({'liked': True, 'like_count': post.like_count()})
     except Exception as e:
         db.session.rollback()
-        print(f"Like error: {e}")
         return jsonify({'error': 'Something went wrong'}), 500
 
 @app.route('/api/post/<int:post_id>/comment', methods=['POST'])
@@ -735,7 +725,6 @@ def add_comment(post_id):
         })
     except Exception as e:
         db.session.rollback()
-        print(f"Comment error: {e}")
         return jsonify({'error': 'Something went wrong'}), 500
 
 @app.route('/follow/<username>')
@@ -759,7 +748,6 @@ def follow_user(username):
         flash(f'You are now following {username}!', 'success')
     except Exception as e:
         db.session.rollback()
-        print(f"Follow error: {e}")
         flash('An error occurred.', 'danger')
     
     return redirect(url_for('user_profile', username=username))
@@ -776,7 +764,6 @@ def unfollow_user(username):
             flash(f'You have unfollowed {username}!', 'success')
     except Exception as e:
         db.session.rollback()
-        print(f"Unfollow error: {e}")
         flash('An error occurred.', 'danger')
     
     return redirect(url_for('user_profile', username=username))
@@ -845,7 +832,6 @@ def create_story():
             return redirect(url_for('home'))
         except Exception as e:
             db.session.rollback()
-            print(f"Story creation error: {e}")
             flash('An error occurred.', 'danger')
     
     return render_template('create_story.html')
@@ -859,8 +845,10 @@ def messages():
     received_from = db.session.query(Message.sender_id).filter(Message.recipient_id == current_user.id).distinct()
     
     partner_ids = set()
-    for (pid,) in sent_to: partner_ids.add(pid)
-    for (pid,) in received_from: partner_ids.add(pid)
+    for (pid,) in sent_to:
+        partner_ids.add(pid)
+    for (pid,) in received_from:
+        partner_ids.add(pid)
     
     conversations = []
     for pid in partner_ids:
@@ -975,11 +963,7 @@ def api_send_image():
 def notifications():
     notifications_list = Notification.query.filter_by(user_id=current_user.id)\
         .order_by(Notification.created_at.desc()).limit(50).all()
-    
-    formatted = []
-    for n in notifications_list:
-        formatted.append(n.to_dict())
-    
+    formatted = [n.to_dict() for n in notifications_list]
     return render_template('notifications.html', notifications=formatted)
 
 @app.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
@@ -988,7 +972,6 @@ def mark_notification_read(notif_id):
     notif = Notification.query.get_or_404(notif_id)
     if notif.user_id != current_user.id:
         return jsonify({'error': 'Unauthorized'}), 403
-    
     notif.is_read = True
     db.session.commit()
     return jsonify({'success': True})
@@ -1015,13 +998,11 @@ def unread_notification_count():
 def get_algorithmic_feed(user, page=1, per_page=10):
     following_ids = [f.followed_id for f in user.following]
     post_ids = following_ids + [user.id]
-    
     posts = Post.query.filter(Post.user_id.in_(post_ids)).all() if post_ids else []
     
     scored_posts = []
     for post in posts:
         score = post.engagement_score()
-        
         if post.category:
             interest = UserInterest.query.filter_by(
                 user_id=user.id, 
@@ -1029,11 +1010,9 @@ def get_algorithmic_feed(user, page=1, per_page=10):
             ).first()
             if interest:
                 score += interest.weight * 10
-        
         scored_posts.append((post, score))
     
     scored_posts.sort(key=lambda x: x[1], reverse=True)
-    
     start = (page - 1) * per_page
     end = start + per_page
     return [post for post, _ in scored_posts[start:end]]
@@ -1065,7 +1044,6 @@ def get_suggested_users(user):
 def api_feed():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    
     posts = get_algorithmic_feed(current_user, page=page, per_page=per_page)
     
     posts_data = []
@@ -1091,16 +1069,12 @@ def api_trending():
     posts = Post.query.filter(Post.created_at >= one_day_ago).all()
     scored_posts = [(post, post.engagement_score()) for post in posts]
     scored_posts.sort(key=lambda x: x[1], reverse=True)
-    
-    trending = [{'id': p.id, 'title': p.title, 'engagement_score': s} 
-                for p, s in scored_posts[:10]]
-    
+    trending = [{'id': p.id, 'title': p.title, 'engagement_score': s} for p, s in scored_posts[:10]]
     return jsonify({'trending': trending})
 
 # ============ INITIALIZATION ============
 
 def initialize_database():
-    """Initialize the database tables safely"""
     with app.app_context():
         try:
             db.create_all()
