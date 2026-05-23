@@ -96,7 +96,7 @@ class User(db.Model, UserMixin):
     comments = db.relationship('Comment', backref='author', lazy=True, cascade="all, delete-orphan")
     interests = db.relationship('UserInterest', backref='user', lazy=True, cascade="all, delete-orphan")
     stories = db.relationship('Story', backref='author', lazy=True, cascade="all, delete-orphan")
-    notifications = db.relationship('Notification', backref='user', lazy=True, cascade="all, delete-orphan")
+    notifications = db.relationship('Notification', foreign_keys='Notification.user_id', backref='user', lazy=True, cascade="all, delete-orphan")
     messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True, cascade="all, delete-orphan")
     messages_received = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy=True, cascade="all, delete-orphan")
     
@@ -391,7 +391,7 @@ def create_notification(user, actor, notif_type, post=None, message='', target_u
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# ============ CONTEXT PROCESSOR (CSRF FIX) ============
+# ============ CONTEXT PROCESSOR ============
 
 @app.context_processor
 def utility_processor():
@@ -474,17 +474,23 @@ def login():
             password = request.form.get('password', '')
             remember = bool(request.form.get('remember'))
             
+            if not email or not password:
+                flash('Please enter both email and password.', 'danger')
+                return redirect(url_for('login'))
+            
             user = User.query.filter_by(email=email).first()
             
             if user and bcrypt.check_password_hash(user.password, password):
                 login_user(user, remember=remember)
                 next_page = request.args.get('next')
+                flash(f'Welcome back, {user.username}!', 'success')
                 return redirect(next_page) if next_page else redirect(url_for('home'))
             else:
-                flash('Login failed. Check email and password.', 'danger')
+                flash('Invalid email or password. Please try again.', 'danger')
         except Exception as e:
+            db.session.rollback()
             print(f"Login error: {e}")
-            flash('An error occurred during login. Please try again.', 'danger')
+            flash(f'Login error: {str(e)}', 'danger')
     
     return render_template('login.html')
 
@@ -1080,7 +1086,15 @@ def initialize_database():
             db.create_all()
             print("✅ Database tables verified/created!")
         except Exception as e:
-            print(f"⚠️ Database initialization warning: {e}")
+            print(f"❌ Database initialization failed: {e}")
+            return
+        
+        try:
+            user_count = User.query.count()
+            print(f"✅ Database connection verified. {user_count} users found.")
+        except Exception as e:
+            print(f"❌ Cannot query database: {e}")
+            return
         
         try:
             if not User.query.filter_by(username='admin').first():
@@ -1093,7 +1107,9 @@ def initialize_database():
                 )
                 db.session.add(admin)
                 db.session.commit()
-                print("✅ Default admin user created!")
+                print("✅ Default admin user created! (admin@bantu.africa / admin123)")
+            else:
+                print("✅ Admin user already exists")
         except Exception as e:
             db.session.rollback()
             print(f"⚠️ Admin user creation skipped: {e}")
