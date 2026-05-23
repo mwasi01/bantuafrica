@@ -131,7 +131,7 @@ class User(db.Model, UserMixin):
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False, default='Untitled')
+    title = db.Column(db.String(100), nullable=True, default='Untitled')
     content = db.Column(db.Text, nullable=False, default='')
     image = db.Column(db.String(100))
     video = db.Column(db.String(100))
@@ -609,8 +609,12 @@ def new_post():
                 flash('Post content cannot be empty!', 'danger')
                 return redirect(url_for('new_post'))
             
+            title = request.form.get('title', '').strip()
+            if not title:
+                title = 'Untitled'
+            
             post = Post(
-                title=request.form.get('title', 'Untitled').strip() or 'Untitled',
+                title=title,
                 content=content,
                 category=request.form.get('category', 'general'),
                 author=current_user
@@ -637,8 +641,8 @@ def new_post():
             return redirect(url_for('home'))
         except Exception as e:
             db.session.rollback()
-            print(f"Post creation error: {e}")
-            flash('An error occurred while creating your post.', 'danger')
+            print(f"❌ Post creation error: {e}")
+            flash(f'Error creating post: {str(e)}', 'danger')
     
     return render_template('create_post.html')
 
