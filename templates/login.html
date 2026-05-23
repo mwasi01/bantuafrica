@@ -1,38 +1,558 @@
 {% extends "base.html" %}
-{% block title %}Login - Bantu Africa{% endblock %}
+
+{% block title %}Sign In | Bantu Africa{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Sign In to Bantu Africa</h4>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('login') }}">
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="password" name="password" required>
-                    </div>
-                    <div class="mb-3 form-check">
-                        <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                        <label class="form-check-label" for="remember">Remember me</label>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-sign-in-alt"></i> Sign In
-                        </button>
-                    </div>
-                </form>
-                <div class="text-center mt-3">
-                    <p>Don't have an account? <a href="{{ url_for('register') }}">Register here</a></p>
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: radial-gradient(ellipse at top, #1a1a2e 0%, #000000 70%);
+    }
+
+    .login-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 24px;
+        padding: 48px 40px;
+        width: 100%;
+        max-width: 440px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    @media (max-width: 480px) {
+        .login-card {
+            padding: 32px 20px;
+            border-radius: 20px;
+        }
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 36px;
+    }
+
+    .login-logo {
+        font-size: 48px;
+        margin-bottom: 8px;
+    }
+
+    .login-header h2 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .login-header p {
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    /* Form Styles */
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 14px;
+        color: var(--text-secondary);
+        font-size: 16px;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 14px 14px 14px 44px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-primary);
+        font-size: 15px;
+        outline: none;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .form-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+    }
+
+    .form-input::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.6;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 14px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        z-index: 1;
+    }
+
+    .password-toggle:hover {
+        color: var(--text-primary);
+    }
+
+    /* Remember & Forgot Row */
+    .form-options {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        font-size: 13px;
+    }
+
+    .remember-me {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        color: var(--text-secondary);
+    }
+
+    .remember-me input[type="checkbox"] {
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border-color);
+        border-radius: 4px;
+        background: var(--bg-card);
+        cursor: pointer;
+        position: relative;
+        transition: all 0.2s;
+    }
+
+    .remember-me input[type="checkbox"]:checked {
+        background: var(--accent);
+        border-color: var(--accent);
+    }
+
+    .remember-me input[type="checkbox"]:checked::after {
+        content: '\f00c';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: white;
+        font-size: 10px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+
+    .forgot-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+    }
+
+    .forgot-link:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+    }
+
+    /* Submit Button */
+    .btn-login {
+        width: 100%;
+        padding: 14px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 24px rgba(255, 45, 85, 0.25);
+    }
+
+    .btn-login:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 12px 32px rgba(255, 45, 85, 0.4);
+    }
+
+    .btn-login:active {
+        transform: scale(0.98);
+    }
+
+    /* Divider */
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color);
+    }
+
+    /* Social Login Buttons */
+    .social-login {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+
+    .social-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+
+    .social-btn:hover {
+        border-color: var(--text-secondary);
+        background: var(--bg-primary);
+    }
+
+    .social-btn.google i {
+        color: #ea4335;
+    }
+
+    .social-btn.facebook i {
+        color: #1877f2;
+    }
+
+    .social-btn.twitter i {
+        color: #1da1f2;
+    }
+
+    /* Register Link */
+    .register-link {
+        text-align: center;
+        font-size: 14px;
+        color: var(--text-secondary);
+    }
+
+    .register-link a {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s;
+    }
+
+    .register-link a:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+    }
+
+    /* Error state for inputs */
+    .form-input.error {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+    }
+
+    /* Loading spinner for button */
+    .btn-login.loading {
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    .spinner-inline {
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+<div class="login-container">
+    <div class="login-card">
+        <!-- Header -->
+        <div class="login-header">
+            <div class="login-logo">🌍</div>
+            <h2>Welcome Back</h2>
+            <p>Sign in to continue to Bantu Africa</p>
+        </div>
+
+        <!-- Login Form -->
+        <form method="POST" action="{{ url_for('login') }}" id="loginForm" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+            
+            <!-- Email -->
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope input-icon"></i>
+                    <input 
+                        type="email" 
+                        name="email" 
+                        id="email" 
+                        class="form-input" 
+                        placeholder="you@example.com"
+                        value="{{ request.form.get('email', '') }}"
+                        required
+                        autocomplete="email"
+                        autofocus
+                    >
                 </div>
             </div>
+
+            <!-- Password -->
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-lock input-icon"></i>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        id="password" 
+                        class="form-input" 
+                        placeholder="Enter your password"
+                        required
+                        autocomplete="current-password"
+                    >
+                    <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Toggle password visibility">
+                        <i class="far fa-eye" id="passwordToggleIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Remember Me & Forgot Password -->
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox" name="remember" id="remember" {% if request.form.get('remember') %}checked{% endif %}>
+                    <span>Remember me</span>
+                </label>
+                <a href="#" class="forgot-link" onclick="showForgotPassword()">Forgot password?</a>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider">or continue with</div>
+
+        <!-- Social Login Placeholders -->
+        <div class="social-login">
+            <button class="social-btn google" onclick="socialLogin('google')">
+                <i class="fab fa-google"></i> Continue with Google
+            </button>
+            <button class="social-btn facebook" onclick="socialLogin('facebook')">
+                <i class="fab fa-facebook-f"></i> Continue with Facebook
+            </button>
+            <button class="social-btn twitter" onclick="socialLogin('twitter')">
+                <i class="fab fa-x-twitter"></i> Continue with X
+            </button>
+        </div>
+
+        <!-- Register Link -->
+        <div class="register-link">
+            Don't have an account? <a href="{{ url_for('register') }}">Create one now</a>
         </div>
     </div>
 </div>
+
+<!-- Forgot Password Modal -->
+<div id="forgotPasswordModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; text-align: center;">
+        <i class="fas fa-key" style="font-size: 40px; color: var(--accent); margin-bottom: 12px;"></i>
+        <h3 style="margin-bottom: 8px;">Reset Your Password</h3>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+            Enter your email address and we'll send you a link to reset your password.
+        </p>
+        <input type="email" placeholder="you@example.com" 
+               style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 14px; margin-bottom: 16px; outline: none;"
+               id="resetEmail">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeForgotPassword()" 
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer;">
+                Cancel
+            </button>
+            <button onclick="sendResetLink()" 
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer;">
+                Send Link
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ============ PASSWORD TOGGLE ============
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.getElementById('passwordToggleIcon');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.className = 'far fa-eye-slash';
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.className = 'far fa-eye';
+        }
+    }
+
+    // ============ FORGOT PASSWORD MODAL ============
+    function showForgotPassword() {
+        document.getElementById('forgotPasswordModal').style.display = 'flex';
+        document.getElementById('resetEmail').value = document.getElementById('email').value;
+        setTimeout(() => document.getElementById('resetEmail').focus(), 100);
+    }
+
+    function closeForgotPassword() {
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+    }
+
+    function sendResetLink() {
+        const email = document.getElementById('resetEmail').value.trim();
+        if (!email) {
+            showToast('Please enter your email address.', 'error');
+            return;
+        }
+        
+        // Placeholder - implement actual password reset
+        showToast('If an account exists for ' + email + ', a reset link will be sent.', 'success');
+        closeForgotPassword();
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeForgotPassword();
+        }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('forgotPasswordModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeForgotPassword();
+        }
+    });
+
+    // ============ FORM SUBMISSION ============
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+
+    loginForm.addEventListener('submit', function(e) {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        let hasError = false;
+
+        // Reset error states
+        document.querySelectorAll('.form-input').forEach(input => {
+            input.classList.remove('error');
+        });
+
+        // Validate email
+        if (!email) {
+            document.getElementById('email').classList.add('error');
+            showToast('Please enter your email address.', 'error');
+            hasError = true;
+        } else if (!isValidEmail(email)) {
+            document.getElementById('email').classList.add('error');
+            showToast('Please enter a valid email address.', 'error');
+            hasError = true;
+        }
+
+        // Validate password
+        if (!password) {
+            document.getElementById('password').classList.add('error');
+            showToast('Please enter your password.', 'error');
+            hasError = true;
+        }
+
+        if (hasError) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Show loading state
+        loginBtn.classList.add('loading');
+        loginBtn.innerHTML = '<span class="spinner-inline"></span> Signing in...';
+    });
+
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    // ============ SOCIAL LOGIN PLACEHOLDERS ============
+    function socialLogin(provider) {
+        showToast(provider.charAt(0).toUpperCase() + provider.slice(1) + ' login coming soon!', 'info');
+    }
+
+    // ============ CLEAR ERROR ON INPUT ============
+    document.querySelectorAll('.form-input').forEach(input => {
+        input.addEventListener('input', function() {
+            this.classList.remove('error');
+        });
+    });
+
+    // ============ FOCUS FIRST ERROR FIELD ============
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'danger' %}
+                    // Highlight both fields on failed login
+                    document.addEventListener('DOMContentLoaded', function() {
+                        document.getElementById('email').classList.add('error');
+                        document.getElementById('password').classList.add('error');
+                    });
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</script>
 {% endblock %}
