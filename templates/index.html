@@ -1,352 +1,169 @@
 {% extends "base.html" %}
-{% block title %}Home - Bantu Africa{% endblock %}
+
+{% block title %}Bantu Africa - Feed{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- Main Content -->
-    <div class="col-lg-8">
-        <!-- Create Post Card -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Create a Post</h5>
-                <form action="{{ url_for('new_post') }}" method="GET">
-                    <div class="mb-3">
-                        <textarea class="form-control" rows="2" placeholder="What's on your mind?" readonly 
-                                  onclick="window.location.href='{{ url_for('new_post') }}'"></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-pen"></i> Create Post
-                    </button>
-                </form>
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item active">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('notifications') }}" class="mobile-nav-item">
+        <i class="fas fa-bell"></i>
+        <span>Alerts</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
+<!-- TikTok-style Vertical Feed -->
+<div class="feed-container" id="feedContainer">
+    {% if posts %}
+        {% for post in posts %}
+        <div class="post-card" data-post-id="{{ post.id }}" data-category="{{ post.category or 'general' }}">
+            
+            <!-- Media: Video or Image -->
+            {% if post.video %}
+            <video 
+                src="{{ url_for('static', filename='uploads/' + post.video) }}"
+                poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
+                loop
+                muted
+                playsinline
+                preload="metadata"
+                class="post-media"
+                data-video-id="{{ post.id }}"
+            ></video>
+            {% elif post.image %}
+            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
+                 alt="{{ post.title }}" 
+                 class="post-media"
+                 loading="lazy">
+            {% else %}
+            <div class="text-only-post" style="padding: 40px; color: white; text-align: center;">
+                <i class="fas fa-quote-left" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></i>
+                <p style="font-size: 20px; line-height: 1.5;">{{ post.content[:200] }}</p>
             </div>
-        </div>
-
-        <!-- Feed -->
-        <h4 class="mb-4">Your Feed</h4>
-        
-        {% if posts %}
-            <div id="posts-container">
-                {% for post in posts %}
-                <div class="card mb-4 post-card" data-post-id="{{ post.id }}">
-                    <div class="card-body">
-                        <!-- Post Header -->
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="d-flex align-items-center">
-                                <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" 
-                                     class="rounded-circle me-2" width="40" height="40"
-                                     onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                                <div>
-                                    <h6 class="mb-0">
-                                        <a href="{{ url_for('user_profile', username=post.author.username) }}" 
-                                           class="text-decoration-none">
-                                            {{ post.author.username }}
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">{{ post.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
-                                </div>
-                            </div>
-                            {% if post.author == current_user %}
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                        type="button" data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <a class="dropdown-item text-danger" 
-                                           href="{{ url_for('delete_post', post_id=post.id) }}"
-                                           onclick="return confirm('Are you sure you want to delete this post?')">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Post Content -->
-                        {% if post.title %}
-                        <h5 class="card-title">{{ post.title }}</h5>
+            {% endif %}
+            
+            <!-- Bottom Overlay -->
+            <div class="post-overlay">
+                <div class="post-info">
+                    <div class="post-author">
+                        <a href="{{ url_for('user_profile', username=post.author.username) }}">
+                            <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" 
+                                 alt="{{ post.author.username }}"
+                                 onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        </a>
+                        <a href="{{ url_for('user_profile', username=post.author.username) }}" class="username">
+                            @{{ post.author.username }}
+                        </a>
+                        {% if post.author != current_user and not current_user.is_following(post.author) %}
+                        <button class="follow-btn follow-toggle" 
+                                data-username="{{ post.author.username }}"
+                                onclick="toggleFollow('{{ post.author.username }}', this)">
+                            Follow
+                        </button>
                         {% endif %}
-                        
-                        <p class="card-text">{{ post.content }}</p>
-                        
-                        {% if post.image %}
-                        <div class="text-center my-3">
-                            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
-                                 class="img-fluid rounded" alt="Post image">
-                        </div>
-                        {% endif %}
-
-                        <!-- Post Actions -->
-                        <div class="d-flex justify-content-between mt-3">
-                            <div>
-                                <button class="btn btn-sm btn-outline-primary like-btn" 
-                                        data-post-id="{{ post.id }}">
-                                    <i class="far fa-heart"></i>
-                                    <span class="like-count">{{ post.like_count() }}</span> Likes
-                                </button>
-                                <a href="{{ url_for('view_post', post_id=post.id) }}" 
-                                   class="btn btn-sm btn-outline-secondary">
-                                    <i class="far fa-comment"></i>
-                                    <span class="comment-count">{{ post.comment_count() }}</span> Comments
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- Comments Preview -->
-                        {% if post.comments[:2] %}
-                        <div class="mt-3 border-top pt-3">
-                            <h6>Recent Comments:</h6>
-                            {% for comment in post.comments[:2] %}
-                            <div class="mb-2">
-                                <small>
-                                    <strong>{{ comment.author.username }}</strong>: {{ comment.content }}
-                                </small>
-                            </div>
-                            {% endfor %}
-                            {% if post.comments|length > 2 %}
-                            <small class="text-muted">
-                                {{ post.comments|length - 2 }} more comments...
-                            </small>
-                            {% endif %}
-                        </div>
+                    </div>
+                    <p class="post-caption">{{ post.content[:150] }}</p>
+                    <div class="post-meta">
+                        <span>{{ post.created_at.strftime('%b %d') if post.created_at is string else post.created_at }}</span>
+                        {% if post.category %}
+                        <span class="post-category">{{ post.category }}</span>
                         {% endif %}
                     </div>
                 </div>
-                {% endfor %}
             </div>
-        {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-newspaper fa-4x text-muted mb-3"></i>
-                <h4>No posts yet</h4>
-                <p class="text-muted">Start by following people or creating your first post!</p>
-                <a href="{{ url_for('new_post') }}" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Create Your First Post
+            
+            <!-- Right Side Actions -->
+            <div class="post-actions">
+                <button class="action-btn like-btn" 
+                        data-post-id="{{ post.id }}"
+                        aria-label="Like">
+                    <i class="far fa-heart"></i>
+                    <span class="count like-count">{{ post.like_count() }}</span>
+                </button>
+                
+                <button class="action-btn comment-btn" 
+                        data-post-id="{{ post.id }}"
+                        onclick="window.location.href='{{ url_for('view_post', post_id=post.id) }}'"
+                        aria-label="Comment">
+                    <i class="far fa-comment"></i>
+                    <span class="count comment-count">{{ post.comment_count() }}</span>
+                </button>
+                
+                <button class="action-btn share-btn" 
+                        data-post-id="{{ post.id }}"
+                        aria-label="Share">
+                    <i class="far fa-share-square"></i>
+                    <span class="count">Share</span>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Infinite Scroll Sentinel -->
+        <div id="scrollSentinel" style="height: 1px;"></div>
+        
+    {% else %}
+        <!-- Empty State -->
+        <div style="display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 20px;">
+            <div>
+                <i class="fas fa-users" style="font-size: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
+                <h2 style="margin-bottom: 8px;">Welcome to Bantu Africa!</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">Follow people to see their posts here</p>
+                <a href="{{ url_for('search') }}" class="btn-follow" style="padding: 12px 30px; border-radius: 25px; display: inline-block;">
+                    Discover People
                 </a>
             </div>
-        {% endif %}
-    </div>
-
-    <!-- Sidebar -->
-    <div class="col-lg-4">
-        <!-- User Profile Card -->
-        <div class="card mb-4">
-            <div class="card-body text-center">
-                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-                     class="rounded-circle mb-3" width="100" height="100"
-                     onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                <h5>{{ current_user.username }}</h5>
-                <p class="text-muted">{{ current_user.bio or 'No bio yet' }}</p>
-                <div class="row">
-                    <div class="col-6">
-                        <h6>{{ current_user.posts|length }}</h6>
-                        <small class="text-muted">Posts</small>
-                    </div>
-                    <div class="col-6">
-                        <h6>{{ current_user.followers.count() }}</h6>
-                        <small class="text-muted">Followers</small>
-                    </div>
-                </div>
-            </div>
         </div>
-
-        <!-- Suggestions - FIXED: removed direct User.query from template -->
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">Who to Follow</h6>
-            </div>
-            <div class="card-body">
-                {% if suggested_users %}
-                    {% for user in suggested_users %}
-                        {% if not current_user.is_following(user) %}
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center">
-                                <img src="{{ url_for('static', filename='uploads/' + user.profile_image) }}" 
-                                     class="rounded-circle me-2" width="40" height="40"
-                                     onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'">
-                                <div>
-                                    <h6 class="mb-0">{{ user.username }}</h6>
-                                    {% if user.bio %}
-                                    <small class="text-muted">{{ user.bio[:30] }}...</small>
-                                    {% else %}
-                                    <small class="text-muted">Member of Bantu Africa</small>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <a href="{{ url_for('follow_user', username=user.username) }}" 
-                               class="btn btn-sm btn-outline-primary">
-                                Follow
-                            </a>
-                        </div>
-                        {% endif %}
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted mb-0">No suggestions available</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Quick Links -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h6 class="mb-0">Quick Links</h6>
-            </div>
-            <div class="card-body">
-                <div class="list-group list-group-flush">
-                    <a href="{{ url_for('profile') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user me-2"></i> My Profile
-                    </a>
-                    <a href="{{ url_for('search') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-search me-2"></i> Search Users
-                    </a>
-                    <a href="{{ url_for('update_profile') }}" class="list-group-item list-group-item-action">
-                        <i class="fas fa-edit me-2"></i> Edit Profile
-                    </a>
-                    <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action text-danger">
-                        <i class="fas fa-sign-out-alt me-2"></i> Logout
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% endif %}
 </div>
+
+<!-- Suggested Users Sidebar (Desktop only) -->
+{% if suggested_users %}
+<aside class="d-none d-lg-block" style="position: fixed; right: 20px; top: 80px; width: 280px;">
+    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
+        <h5 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Suggested for you</h5>
+        {% for suggested in suggested_users %}
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <a href="{{ url_for('user_profile', username=suggested.username) }}">
+                <img src="{{ url_for('static', filename='uploads/' + suggested.profile_image) }}" 
+                     alt="{{ suggested.username }}"
+                     style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;"
+                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            </a>
+            <div style="flex: 1; min-width: 0;">
+                <a href="{{ url_for('user_profile', username=suggested.username) }}" 
+                   style="font-size: 13px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ suggested.username }}
+                </a>
+                <span style="font-size: 11px; color: var(--text-secondary);">{{ suggested.followers.count() }} followers</span>
+            </div>
+            <button class="follow-btn follow-toggle" 
+                    data-username="{{ suggested.username }}"
+                    onclick="toggleFollow('{{ suggested.username }}', this)"
+                    style="font-size: 11px; padding: 3px 12px;">
+                Follow
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</aside>
+{% endif %}
 {% endblock %}
 
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Like button functionality
-    document.querySelectorAll('.like-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const postId = this.dataset.postId;
-            const likeCountSpan = this.querySelector('.like-count');
-            const heartIcon = this.querySelector('i');
-            
-            fetch(`/api/post/${postId}/like`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                likeCountSpan.textContent = data.like_count;
-                if (data.liked) {
-                    heartIcon.className = 'fas fa-heart';
-                    this.classList.remove('btn-outline-primary');
-                    this.classList.add('btn-primary');
-                } else {
-                    heartIcon.className = 'far fa-heart';
-                    this.classList.remove('btn-primary');
-                    this.classList.add('btn-outline-primary');
-                }
-            })
-            .catch(error => console.error('Error:', error));
-        });
-    });
-
-    // Infinite scroll for feed
-    let isLoading = false;
-    let currentPage = 1;
-    let hasMore = true;
-
-    function loadMorePosts() {
-        if (isLoading || !hasMore) return;
-        
-        isLoading = true;
-        currentPage++;
-        
-        fetch(`/api/feed?page=${currentPage}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.posts && data.posts.length > 0) {
-                    const postsContainer = document.getElementById('posts-container');
-                    data.posts.forEach(post => {
-                        const postHTML = createPostHTML(post);
-                        postsContainer.insertAdjacentHTML('beforeend', postHTML);
-                    });
-                    hasMore = data.has_next;
-                } else {
-                    hasMore = false;
-                }
-                isLoading = false;
-            })
-            .catch(error => {
-                console.error('Error loading posts:', error);
-                isLoading = false;
-                hasMore = false;
-            });
-    }
-
-    // Create post HTML function for infinite scroll
-    function createPostHTML(post) {
-        return `
-        <div class="card mb-4 post-card fade-in" data-post-id="${post.id}">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <div class="d-flex align-items-center">
-                        <img src="/static/uploads/${post.author.profile_image}" 
-                             class="rounded-circle me-2" width="40" height="40"
-                             onerror="this.src='/static/images/default.jpg'">
-                        <div>
-                            <h6 class="mb-0">
-                                <a href="/profile/${post.author.username}" class="text-decoration-none">
-                                    ${post.author.username}
-                                </a>
-                            </h6>
-                            <small class="text-muted">${post.created_at}</small>
-                        </div>
-                    </div>
-                </div>
-
-                ${post.title ? `<h5 class="card-title">${post.title}</h5>` : ''}
-                
-                <p class="card-text">${post.content}</p>
-                
-                ${post.image ? `
-                <div class="text-center my-3">
-                    <img src="/static/uploads/${post.image}" class="img-fluid rounded" alt="Post image">
-                </div>
-                ` : ''}
-
-                <div class="d-flex justify-content-between mt-3">
-                    <div>
-                        <button class="btn btn-sm ${post.liked ? 'btn-primary liked' : 'btn-outline-primary'} like-btn" 
-                                data-post-id="${post.id}">
-                            <i class="${post.liked ? 'fas' : 'far'} fa-heart"></i>
-                            <span class="like-count">${post.like_count}</span> Likes
-                        </button>
-                        <a href="/post/${post.id}" class="btn btn-sm btn-outline-secondary">
-                            <i class="far fa-comment"></i>
-                            <span class="comment-count">${post.comment_count}</span> Comments
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        `;
-    }
-
-    // Check if user has scrolled to bottom
-    window.addEventListener('scroll', function() {
-        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-            loadMorePosts();
-        }
-    });
-
-    // Add fade-in animation to new content
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('fade-in');
-            }
-        });
-    });
-
-    document.querySelectorAll('.post-card').forEach(card => {
-        observer.observe(card);
-    });
-});
-</script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% endblock %}
