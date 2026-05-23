@@ -275,7 +275,14 @@
         background: var(--accent-hover);
         transform: translateY(-1px);
     }
-
+ // Handle browser back button with unsaved content
+    window.addEventListener('beforeunload', function(e) {
+        if (postContent.value.trim() || selectedFile) {
+            // Modern browsers ignore custom messages, but this triggers the dialog
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
     .post-submit-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -709,14 +716,28 @@
             categoryInput.value = savedCategory;
         }
     });
+// Handle browser back button with unsaved content
+let formSubmitted = false;
 
-    // Handle browser back button with unsaved content
-    window.addEventListener('beforeunload', function(e) {
-        if (postContent.value.trim() || selectedFile) {
-            // Modern browsers ignore custom messages, but this triggers the dialog
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    });
+window.addEventListener('beforeunload', function(e) {
+    if (!formSubmitted && (postContent.value.trim() || selectedFile)) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// Set flag when form is being submitted
+postForm.addEventListener('submit', function() {
+    formSubmitted = true;
+});
+
+// Also set flag when clicking any navigation link
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('a');
+    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
+        formSubmitted = true;
+    }
+});
+   
 </script>
 {% endblock %}
