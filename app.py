@@ -12,10 +12,10 @@ import secrets
 # Initialize Flask app
 app = Flask(__name__)
 
-# ============ CRITICAL SECURITY FIX ============
+# ============ SECURITY CONFIGURATION ============
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 if not app.config['SECRET_KEY']:
-    raise RuntimeError("SECRET_KEY environment variable is required")
+    raise RuntimeError("SECRET_KEY environment variable is required. Add it in Render Dashboard → Environment.")
 
 # Database configuration
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///bantu.db')
@@ -23,6 +23,11 @@ if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,
+    'pool_recycle': 300,
+    'pool_pre_ping': True,
+}
 
 # File upload configuration
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
@@ -43,6 +48,7 @@ login_manager.login_message_category = 'info'
 try:
     from flask_wtf.csrf import CSRFProtect
     csrf = CSRFProtect(app)
+    print("✅ CSRF protection enabled")
 except ImportError:
     print("⚠️ Flask-WTF not installed. CSRF protection disabled.")
     csrf = None
@@ -57,16 +63,24 @@ try:
         default_limits=["200 per day", "50 per hour"],
         storage_uri="memory://"
     )
+    print("✅ Rate limiting enabled")
 except ImportError:
     print("⚠️ Flask-Limiter not installed. Rate limiting disabled.")
-    # Create a dummy limiter that does nothing
     limiter = type('DummyLimiter', (), {
         'limit': lambda *args, **kwargs: lambda f: f
     })()
     get_remote_address = lambda: '127.0.0.1'
 
-# Create upload folder if it doesn't exist
+# Create upload folder and default image if they don't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+default_image_path = os.path.join(UPLOAD_FOLDER, 'default.jpg')
+if not os.path.exists(default_image_path):
+    try:
+        img = Image.new('RGB', (200, 200), color='#1a1a2e')
+        img.save(default_image_path)
+        print("✅ Default profile image created")
+    except Exception as e:
+        print(f"⚠️ Could not create default image: {e}")
 
 # ============ MODELS ============
 
@@ -144,7 +158,7 @@ class Post(db.Model):
         return len(self.comments)
     
     def share_count(self):
-        return 0  # Placeholder
+        return 0
     
     def engagement_score(self):
         hours_old = max(0, (datetime.utcnow() - self.created_at).total_seconds() / 3600)
@@ -247,7 +261,7 @@ class Message(db.Model):
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    type = db.Column(db.String(20), nullable=False)  # 'like', 'comment', 'follow', 'mention'
+    type = db.Column(db.String(20), nullable=False)
     message = db.Column(db.Text, default='')
     is_read = db.Column(db.Boolean, default=False)
     target_url = db.Column(db.String(200))
@@ -256,7 +270,6 @@ class Notification(db.Model):
     actor_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True)
     
-    # Relationships
     actor = db.relationship('User', foreign_keys=[actor_id])
     post = db.relationship('Post', foreign_keys=[post_id])
     
@@ -310,7 +323,6 @@ def save_video(file):
     video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_fn)
     file.save(video_path)
     
-    # Generate thumbnail
     thumbnail_fn = random_hex + '.jpg'
     thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], thumbnail_fn)
     
@@ -330,7 +342,6 @@ def save_video(file):
         except Exception:
             thumbnail_fn = None
     
-    # Get video duration
     duration = 0
     try:
         result = subprocess.run([
@@ -371,7 +382,7 @@ def create_notification(user, actor, notif_type, post=None, message='', target_u
     """Create a notification for a user"""
     try:
         if user.id == actor.id:
-            return  # Don't notify users about their own actions
+            return
         
         notification = Notification(
             type=notif_type,
@@ -397,7 +408,7 @@ def load_user(user_id):
 def utility_processor():
     """Add common variables to all templates"""
     def csrf_token():
-        return ''  # Will be handled by Flask-WTF if available
+        return ''
     return dict(csrf_token=csrf_token)
 
 # ============ ROUTES ============
@@ -427,7 +438,6 @@ def register():
             password = request.form.get('password', '')
             confirm_password = request.form.get('confirm_password', '')
             
-            # Validation
             if not all([username, email, password]):
                 flash('All fields are required!', 'danger')
                 return redirect(url_for('register'))
@@ -654,7 +664,6 @@ def delete_post(post_id):
         return redirect(url_for('home'))
     
     try:
-        # Delete associated files
         for file_attr in ['video', 'thumbnail', 'image']:
             filename = getattr(post, file_attr)
             if filename:
@@ -846,7 +855,6 @@ def create_story():
 @app.route('/messages')
 @login_required
 def messages():
-    # Get unique conversation partners
     sent_to = db.session.query(Message.recipient_id).filter(Message.sender_id == current_user.id).distinct()
     received_from = db.session.query(Message.sender_id).filter(Message.recipient_id == current_user.id).distinct()
     
@@ -892,7 +900,6 @@ def api_get_messages(username):
         ((Message.sender_id == partner.id) & (Message.recipient_id == current_user.id))
     ).order_by(Message.created_at.asc()).all()
     
-    # Mark as read
     Message.query.filter(
         Message.sender_id == partner.id,
         Message.recipient_id == current_user.id,
@@ -969,7 +976,6 @@ def notifications():
     notifications_list = Notification.query.filter_by(user_id=current_user.id)\
         .order_by(Notification.created_at.desc()).limit(50).all()
     
-    # Format for template
     formatted = []
     for n in notifications_list:
         formatted.append(n.to_dict())
@@ -994,6 +1000,15 @@ def mark_all_read():
         .update({'is_read': True})
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/notifications/unread-count')
+@login_required
+def unread_notification_count():
+    count = Notification.query.filter_by(
+        user_id=current_user.id, 
+        is_read=False
+    ).count()
+    return jsonify({'count': count})
 
 # ============ ALGORITHM FUNCTIONS ============
 
@@ -1043,7 +1058,7 @@ def get_suggested_users(user):
     
     return similar_users[:5]
 
-# ============ API ENDPOINTS ============
+# ============ API FEED ENDPOINTS ============
 
 @app.route('/api/feed')
 @login_required
