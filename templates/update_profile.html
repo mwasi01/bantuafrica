@@ -1,70 +1,728 @@
 {% extends "base.html" %}
-{% block title %}Edit Profile - Bantu Africa{% endblock %}
+
+{% block title %}Edit Profile | Bantu Africa{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0">Edit Profile</h4>
+<style>
+    .edit-profile-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px 16px 100px;
+        min-height: 100vh;
+        background: var(--bg-primary);
+    }
+
+    .edit-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 32px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .edit-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+    }
+
+    .cancel-btn {
+        color: var(--text-secondary);
+        font-size: 14px;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .cancel-btn:hover {
+        background: var(--bg-card);
+        color: var(--text-primary);
+    }
+
+    /* Profile Picture Section */
+    .avatar-section {
+        text-align: center;
+        margin-bottom: 36px;
+    }
+
+    .avatar-wrapper {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    .avatar-preview {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid var(--border-color);
+        transition: all 0.3s;
+    }
+
+    .avatar-wrapper:hover .avatar-preview {
+        border-color: var(--accent);
+        opacity: 0.7;
+    }
+
+    .avatar-overlay {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .avatar-wrapper:hover .avatar-overlay {
+        opacity: 1;
+    }
+
+    .avatar-overlay i {
+        color: white;
+        font-size: 28px;
+    }
+
+    .avatar-hint {
+        display: block;
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-top: 10px;
+    }
+
+    .avatar-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 12px;
+    }
+
+    .avatar-btn {
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    .avatar-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .avatar-btn.remove {
+        color: var(--accent);
+        border-color: transparent;
+    }
+
+    .avatar-btn.remove:hover {
+        background: rgba(255, 45, 85, 0.1);
+    }
+
+    /* Form Styles */
+    .form-section {
+        margin-bottom: 28px;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 14px 16px;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        color: var(--text-primary);
+        font-size: 15px;
+        outline: none;
+        transition: all 0.2s;
+        font-family: inherit;
+    }
+
+    .form-input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+    }
+
+    .form-input::placeholder {
+        color: var(--text-secondary);
+        opacity: 0.6;
+    }
+
+    textarea.form-input {
+        resize: vertical;
+        min-height: 100px;
+        line-height: 1.6;
+    }
+
+    .input-hint {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .char-count {
+        font-size: 12px;
+        color: var(--text-secondary);
+        text-align: right;
+        margin-top: 4px;
+    }
+
+    .char-count.warning {
+        color: var(--accent);
+    }
+
+    /* Danger Zone */
+    .danger-zone {
+        margin-top: 40px;
+        padding: 20px;
+        border: 1px solid rgba(255, 45, 85, 0.3);
+        border-radius: 16px;
+        background: rgba(255, 45, 85, 0.03);
+    }
+
+    .danger-zone h4 {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .danger-zone p {
+        font-size: 13px;
+        color: var(--text-secondary);
+        margin-bottom: 14px;
+        line-height: 1.5;
+    }
+
+    .btn-danger {
+        padding: 10px 20px;
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-danger:hover {
+        background: var(--accent);
+        color: white;
+    }
+
+    /* Fixed Bottom Bar */
+    .save-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px var(--safe-bottom, 20px);
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        z-index: 100;
+    }
+
+    .save-bar-inner {
+        max-width: 600px;
+        margin: 0 auto;
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-save {
+        flex: 1;
+        padding: 14px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 8px 24px rgba(255, 45, 85, 0.25);
+    }
+
+    .btn-save:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+
+    .btn-save:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-save.loading {
+        pointer-events: none;
+        opacity: 0.8;
+    }
+
+    .spinner-inline {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .btn-reset {
+        padding: 14px 20px;
+        background: var(--bg-card);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+
+    .btn-reset:hover {
+        border-color: var(--text-secondary);
+        color: var(--text-primary);
+    }
+
+    /* Success/Error feedback for inputs */
+    .form-input.error {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+    }
+
+    .form-input.success {
+        border-color: #4caf50;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+    }
+
+    .error-text {
+        font-size: 12px;
+        color: var(--accent);
+        margin-top: 4px;
+        display: none;
+    }
+
+    .error-text.visible {
+        display: block;
+    }
+
+    @media (max-width: 480px) {
+        .edit-profile-container {
+            padding: 12px 12px 100px;
+        }
+    }
+</style>
+
+<div class="edit-profile-container">
+    <!-- Header -->
+    <div class="edit-header">
+        <h3>Edit Profile</h3>
+        <a href="{{ url_for('profile') }}" class="cancel-btn">
+            <i class="fas fa-times"></i> Cancel
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data" id="editProfileForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+
+        <!-- Profile Picture -->
+        <div class="avatar-section">
+            <label class="avatar-wrapper" for="profileImageInput" title="Click to change photo">
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
+                     alt="{{ current_user.username }}"
+                     class="avatar-preview"
+                     id="avatarPreview"
+                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                <div class="avatar-overlay">
+                    <i class="fas fa-camera"></i>
+                </div>
+            </label>
+            <input type="file" 
+                   name="profile_image" 
+                   id="profileImageInput" 
+                   accept="image/*" 
+                   style="display: none;"
+                   onchange="previewAvatar(this)">
+            <span class="avatar-hint">Click to change your profile photo</span>
+            <div class="avatar-actions">
+                <button type="button" class="avatar-btn" onclick="document.getElementById('profileImageInput').click()">
+                    <i class="fas fa-upload"></i> Upload Photo
+                </button>
+                {% if current_user.profile_image != 'default.jpg' %}
+                <button type="button" class="avatar-btn remove" onclick="removePhoto()">
+                    <i class="fas fa-trash"></i> Remove
+                </button>
+                {% endif %}
             </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data">
-                    <div class="row">
-                        <div class="col-md-4 text-center mb-4">
-                            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-                                 class="rounded-circle mb-3" width="150" height="150"
-                                 onerror="this.src='{{ url_for('static', filename='images/default.jpg') }}'"
-                                 id="profile-preview">
-                            <div class="mt-2">
-                                <label for="profile_image" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-camera"></i> Change Photo
-                                </label>
-                                <input type="file" class="d-none" id="profile_image" name="profile_image" 
-                                       accept="image/*" onchange="previewImage(event)">
-                            </div>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
-                                <input type="text" class="form-control" id="username" name="username" 
-                                       value="{{ current_user.username }}" required minlength="3" maxlength="20">
-                            </div>
-                            <div class="mb-3">
-                                <label for="bio" class="form-label">Bio</label>
-                                <textarea class="form-control" id="bio" name="bio" rows="3" 
-                                          placeholder="Tell us about yourself...">{{ current_user.bio or '' }}</textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="location" class="form-label">Location</label>
-                                <input type="text" class="form-control" id="location" name="location" 
-                                       value="{{ current_user.location or '' }}" 
-                                       placeholder="Where are you from?">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Changes
-                        </button>
-                        <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary">
-                            Cancel
-                        </a>
-                    </div>
-                </form>
+        </div>
+
+        <!-- Username -->
+        <div class="form-section">
+            <label class="form-label" for="username">Username</label>
+            <input 
+                type="text" 
+                name="username" 
+                id="username" 
+                class="form-input" 
+                value="{{ current_user.username }}"
+                placeholder="Your username"
+                required
+                minlength="3"
+                maxlength="20"
+            >
+            <span class="input-hint">
+                <i class="fas fa-info-circle"></i> 
+                {{ url_for('user_profile', username=current_user.username, _external=True) }}
+            </span>
+            <div class="error-text" id="usernameError">Username must be 3-20 characters and unique</div>
+        </div>
+
+        <!-- Bio -->
+        <div class="form-section">
+            <label class="form-label" for="bio">Bio</label>
+            <textarea 
+                name="bio" 
+                id="bio" 
+                class="form-input" 
+                placeholder="Tell the community about yourself..."
+                maxlength="300"
+            >{{ current_user.bio or '' }}</textarea>
+            <div class="char-count">
+                <span id="bioCount">{{ current_user.bio|length if current_user.bio else 0 }}</span>/300
             </div>
+        </div>
+
+        <!-- Location -->
+        <div class="form-section">
+            <label class="form-label" for="location">
+                <i class="fas fa-map-marker-alt"></i> Location
+            </label>
+            <input 
+                type="text" 
+                name="location" 
+                id="location" 
+                class="form-input" 
+                value="{{ current_user.location or '' }}"
+                placeholder="Where are you based?"
+                maxlength="100"
+            >
+            <span class="input-hint">
+                <i class="fas fa-globe-africa"></i> Help others in your area find you
+            </span>
+        </div>
+
+        <!-- Email (Read-only) -->
+        <div class="form-section">
+            <label class="form-label" for="email">
+                <i class="fas fa-envelope"></i> Email Address
+            </label>
+            <input 
+                type="email" 
+                id="email" 
+                class="form-input" 
+                value="{{ current_user.email }}"
+                disabled
+                style="opacity: 0.6; cursor: not-allowed;"
+            >
+            <span class="input-hint">
+                <i class="fas fa-lock"></i> Email cannot be changed here
+            </span>
+        </div>
+
+        <!-- Website -->
+        <div class="form-section">
+            <label class="form-label" for="website">
+                <i class="fas fa-link"></i> Website (Coming Soon)
+            </label>
+            <input 
+                type="url" 
+                id="website" 
+                class="form-input" 
+                placeholder="https://yourwebsite.com"
+                disabled
+                style="opacity: 0.6; cursor: not-allowed;"
+            >
+            <span class="input-hint">
+                <i class="fas fa-clock"></i> This feature will be available soon
+            </span>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="danger-zone">
+            <h4>
+                <i class="fas fa-exclamation-triangle"></i> Danger Zone
+            </h4>
+            <p>
+                Once you delete your account, there is no going back. All your posts, 
+                comments, and data will be permanently removed.
+            </p>
+            <button type="button" class="btn-danger" onclick="confirmDeleteAccount()">
+                <i class="fas fa-trash-alt"></i> Delete Account
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Fixed Save Bar -->
+<div class="save-bar">
+    <div class="save-bar-inner">
+        <button type="button" class="btn-reset" onclick="resetForm()">
+            <i class="fas fa-undo"></i> Reset
+        </button>
+        <button type="submit" class="btn-save" form="editProfileForm" id="saveBtn">
+            <i class="fas fa-check"></i> Save Changes
+        </button>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-secondary); border-radius: 20px; padding: 32px; max-width: 420px; width: 90%; text-align: center;">
+        <i class="fas fa-exclamation-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 12px;"></i>
+        <h3 style="margin-bottom: 8px;">Delete Your Account?</h3>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+            This action is irreversible. All your data will be permanently deleted. 
+            Please type <strong>{{ current_user.username }}</strong> to confirm.
+        </p>
+        <input type="text" 
+               placeholder="Type your username to confirm" 
+               style="width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); font-size: 14px; margin-bottom: 16px; outline: none;"
+               id="deleteConfirmInput">
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeDeleteModal()" 
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); font-weight: 600; cursor: pointer;">
+                Cancel
+            </button>
+            <button id="confirmDeleteBtn" disabled
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; opacity: 0.5;">
+                Delete Forever
+            </button>
         </div>
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
 <script>
-function previewImage(event) {
-    const reader = new FileReader();
-    reader.onload = function() {
-        const output = document.getElementById('profile-preview');
-        output.src = reader.result;
+    // ============ AVATAR PREVIEW ============
+    let originalAvatar = document.getElementById('avatarPreview').src;
+    let avatarChanged = false;
+
+    function previewAvatar(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select an image file.', 'error');
+            input.value = '';
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image must be less than 5MB.', 'error');
+            input.value = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatarPreview').src = e.target.result;
+            avatarChanged = true;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removePhoto() {
+        document.getElementById('avatarPreview').src = "{{ url_for('static', filename='uploads/default.jpg') }}";
+        document.getElementById('profileImageInput').value = '';
+        avatarChanged = true;
+        showToast('Photo removed. Save changes to apply.', 'info');
+    }
+
+    // ============ BIO CHARACTER COUNT ============
+    const bioInput = document.getElementById('bio');
+    const bioCount = document.getElementById('bioCount');
+
+    bioInput.addEventListener('input', function() {
+        const count = this.value.length;
+        bioCount.textContent = count;
+        if (count > 280) {
+            bioCount.classList.add('warning');
+        } else {
+            bioCount.classList.remove('warning');
+        }
+    });
+
+    // ============ USERNAME VALIDATION ============
+    const usernameInput = document.getElementById('username');
+    const usernameError = document.getElementById('usernameError');
+
+    usernameInput.addEventListener('input', function() {
+        if (this.value.length > 0 && this.value.length < 3) {
+            this.classList.add('error');
+            usernameError.classList.add('visible');
+        } else {
+            this.classList.remove('error');
+            usernameError.classList.remove('visible');
+        }
+    });
+
+    // ============ RESET FORM ============
+    function resetForm() {
+        usernameInput.value = "{{ current_user.username }}";
+        bioInput.value = "{{ current_user.bio or '' }}";
+        document.getElementById('location').value = "{{ current_user.location or '' }}";
+        document.getElementById('avatarPreview').src = originalAvatar;
+        document.getElementById('profileImageInput').value = '';
+        avatarChanged = false;
+        
+        bioCount.textContent = bioInput.value.length;
+        bioCount.classList.remove('warning');
+        usernameInput.classList.remove('error', 'success');
+        usernameError.classList.remove('visible');
+        
+        showToast('Changes reset to original.', 'info');
+    }
+
+    // ============ FORM SUBMISSION ============
+    const editProfileForm = document.getElementById('editProfileForm');
+    const saveBtn = document.getElementById('saveBtn');
+
+    editProfileForm.addEventListener('submit', function(e) {
+        const username = usernameInput.value.trim();
+        
+        // Validate username
+        if (!username || username.length < 3) {
+            e.preventDefault();
+            usernameInput.classList.add('error');
+            usernameError.classList.add('visible');
+            usernameInput.focus();
+            showToast('Username must be at least 3 characters.', 'error');
+            return false;
+        }
+
+        // Show loading state
+        saveBtn.classList.add('loading');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-inline"></span> Saving...';
+        
+        return true;
+    });
+
+    // ============ DELETE ACCOUNT ============
+    function confirmDeleteAccount() {
+        document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('deleteConfirmInput').focus();
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        document.getElementById('deleteConfirmInput').value = '';
+        document.getElementById('confirmDeleteBtn').disabled = true;
+        document.getElementById('confirmDeleteBtn').style.opacity = '0.5';
+    }
+
+    const deleteConfirmInput = document.getElementById('deleteConfirmInput');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const currentUsername = "{{ current_user.username }}";
+
+    deleteConfirmInput.addEventListener('input', function() {
+        if (this.value.trim() === currentUsername) {
+            confirmDeleteBtn.disabled = false;
+            confirmDeleteBtn.style.opacity = '1';
+            confirmDeleteBtn.style.cursor = 'pointer';
+        } else {
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.style.opacity = '0.5';
+            confirmDeleteBtn.style.cursor = 'not-allowed';
+        }
+    });
+
+    confirmDeleteBtn.addEventListener('click', function() {
+        if (deleteConfirmInput.value.trim() === currentUsername) {
+            showToast('Account deletion is not yet implemented.', 'info');
+            closeDeleteModal();
+        }
+    });
+
+    // Close modal on Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
+
+    // ============ UNSAVED CHANGES WARNING ============
+    const initialValues = {
+        username: usernameInput.value,
+        bio: bioInput.value,
+        location: document.getElementById('location').value
     };
-    reader.readAsDataURL(event.target.files[0]);
-}
+
+    window.addEventListener('beforeunload', function(e) {
+        const hasChanges = 
+            usernameInput.value !== initialValues.username ||
+            bioInput.value !== initialValues.bio ||
+            document.getElementById('location').value !== initialValues.location ||
+            avatarChanged;
+
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Remove warning when saving
+    editProfileForm.addEventListener('submit', function() {
+        window.removeEventListener('beforeunload', () => {});
+    });
+
+    // ============ INITIALIZATION ============
+    document.addEventListener('DOMContentLoaded', function() {
+        bioCount.textContent = bioInput.value.length;
+    });
 </script>
 {% endblock %}
