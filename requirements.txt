@@ -1,8 +1,9 @@
-Flask>=3.0.0,<4.0.0
-Flask-SQLAlchemy>=3.1.0,<4.0.0
-Flask-Login>=0.6.0,<1.0.0
-Flask-Bcrypt>=1.0.0,<2.0.0
-psycopg2-binary>=2.9.0,<3.0.0
-gunicorn>=21.2.0,<22.0.0
-Pillow>=10.0.0,<11.0.0
-python-dotenv>=1.0.0,<2.0.0
+flask
+flask-sqlalchemy
+flask-login
+flask-bcrypt
+flask-wtf
+flask-limiter
+Pillow
+gunicorn
+psycopg2-binary
