@@ -323,7 +323,7 @@
 
         <!-- Login Form -->
         <form method="POST" action="{{ url_for('login') }}" id="loginForm" novalidate>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <!-- Email -->
             <div class="form-group">
