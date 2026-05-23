@@ -356,7 +356,7 @@
     </div>
 
     <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data" id="editProfileForm">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Profile Picture -->
         <div class="avatar-section">
