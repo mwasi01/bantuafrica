@@ -805,6 +805,30 @@ def search():
     
     return render_template('search.html', query=query, users=users, posts=posts)
 
+# ============ USER SEARCH API FOR MESSAGING ============
+
+@app.route('/api/search-users')
+@login_required
+def api_search_users():
+    """Search for users to start a new conversation"""
+    query = request.args.get('q', '').strip()
+    if not query or len(query) < 2:
+        return jsonify([])
+    
+    try:
+        users = User.query.filter(
+            User.username.contains(query),
+            User.id != current_user.id
+        ).limit(10).all()
+        
+        return jsonify([{
+            'username': u.username,
+            'profile_image': u.profile_image
+        } for u in users])
+    except Exception as e:
+        print(f"User search error: {e}")
+        return jsonify([])
+
 # ============ STORIES ROUTES ============
 
 @app.route('/stories/<username>')
