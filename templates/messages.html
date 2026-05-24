@@ -253,6 +253,97 @@
     }
     .empty-chat i { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
     .empty-chat h3 { color: var(--text-primary); margin-bottom: 8px; }
+
+    /* New Message Modal */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        max-width: 420px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-card h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 16px;
+    }
+
+    .modal-search-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        margin-bottom: 12px;
+        outline: none;
+        font-size: 14px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+    }
+    .modal-search-input:focus { border-color: var(--accent); }
+
+    .modal-results {
+        max-height: 250px;
+        overflow-y: auto;
+        margin-bottom: 12px;
+    }
+
+    .modal-user-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        cursor: pointer;
+        border-radius: 10px;
+        transition: background 0.15s;
+    }
+    .modal-user-item:hover { background: var(--bg-secondary); }
+
+    .modal-user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .modal-username {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-primary);
+    }
+
+    .modal-no-results {
+        text-align: center;
+        padding: 20px;
+        color: var(--text-secondary);
+        font-size: 13px;
+    }
+
+    .modal-cancel-btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .modal-cancel-btn:hover { background: var(--border-color); }
 </style>
 
 <div class="messages-container">
@@ -260,7 +351,7 @@
     <div class="conversation-list" id="conversationList">
         <div class="messages-header">
             <h4>Messages</h4>
-            <button class="new-message-btn" onclick="newMessage()" title="New Message">
+            <button class="new-message-btn" onclick="openNewMessageModal()" title="New Message">
                 <i class="fas fa-edit"></i>
             </button>
         </div>
@@ -297,7 +388,7 @@
                 <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
                     <i class="fas fa-comments" style="font-size: 48px; margin-bottom: 12px; opacity: 0.3;"></i>
                     <p>No conversations yet</p>
-                    <p style="font-size: 12px;">Connect with people to start messaging</p>
+                    <p style="font-size: 12px;">Click the <strong>✏️</strong> button to start a conversation</p>
                 </div>
             {% endif %}
         </div>
@@ -340,12 +431,89 @@
     </div>
 </div>
 
+<!-- New Message Modal -->
+<div class="modal-overlay" id="newMessageModal">
+    <div class="modal-card">
+        <h3><i class="fas fa-edit"></i> New Message</h3>
+        <input type="text" 
+               class="modal-search-input" 
+               id="newMessageSearch" 
+               placeholder="Search for a user by username..."
+               oninput="searchUsers(this.value)">
+        <div class="modal-results" id="userSearchResults">
+            <div class="modal-no-results">Type at least 2 characters to search</div>
+        </div>
+        <button class="modal-cancel-btn" onclick="closeNewMessageModal()">Cancel</button>
+    </div>
+</div>
+
 <meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
 
 <script>
     let activeConversation = null;
     let messagePollInterval;
 
+    // ============ NEW MESSAGE MODAL ============
+    function openNewMessageModal() {
+        document.getElementById('newMessageModal').classList.add('active');
+        document.getElementById('newMessageSearch').value = '';
+        document.getElementById('userSearchResults').innerHTML = '<div class="modal-no-results">Type at least 2 characters to search</div>';
+        setTimeout(() => document.getElementById('newMessageSearch').focus(), 100);
+    }
+
+    function closeNewMessageModal() {
+        document.getElementById('newMessageModal').classList.remove('active');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('newMessageModal').addEventListener('click', function(e) {
+        if (e.target === this) closeNewMessageModal();
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeNewMessageModal();
+    });
+
+    async function searchUsers(query) {
+        const resultsDiv = document.getElementById('userSearchResults');
+        
+        if (query.length < 2) {
+            resultsDiv.innerHTML = '<div class="modal-no-results">Type at least 2 characters to search</div>';
+            return;
+        }
+        
+        resultsDiv.innerHTML = '<div class="modal-no-results"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+        
+        try {
+            const response = await fetch(`/api/search-users?q=${encodeURIComponent(query)}`);
+            const users = await response.json();
+            
+            if (users.length === 0) {
+                resultsDiv.innerHTML = '<div class="modal-no-results">No users found matching "' + escapeHtml(query) + '"</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = users.map(u => `
+                <div class="modal-user-item" onclick="startConversation('${u.username}', '${u.profile_image}')">
+                    <img src="/static/uploads/${u.profile_image}" 
+                         class="modal-user-avatar" 
+                         alt="${u.username}"
+                         onerror="this.src='/static/uploads/default.jpg'">
+                    <span class="modal-username">@${u.username}</span>
+                </div>
+            `).join('');
+        } catch (error) {
+            resultsDiv.innerHTML = '<div class="modal-no-results">Search failed. Please try again.</div>';
+        }
+    }
+
+    function startConversation(username, profileImage) {
+        closeNewMessageModal();
+        openChat(username, profileImage, null);
+    }
+
+    // ============ CHAT FUNCTIONS ============
     function openChat(username, profileImage, element) {
         activeConversation = username;
         document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
@@ -460,11 +628,6 @@
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
-    }
-
-    function newMessage() {
-        const username = prompt('Enter username to message:');
-        if (username) window.location.href = `/messages?user=${username}`;
     }
 
     function filterConversations(query) {
