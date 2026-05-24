@@ -676,5 +676,20 @@
     document.getElementById('chatInput').addEventListener('input', function() {
         document.getElementById('sendBtn').disabled = !this.value.trim();
     });
+    // ============ AUTO-OPEN CONVERSATION FROM URL ============
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    if (userParam) {
+        // Find the conversation in the list or start a new one
+        const existingConv = document.querySelector(`.conversation-item[data-username="${userParam}"]`);
+        if (existingConv) {
+            existingConv.click();
+        } else {
+            // Start a new conversation with this user
+            openChat(userParam, 'default.jpg', null);
+        }
+    }
+});
 </script>
 {% endblock %}
