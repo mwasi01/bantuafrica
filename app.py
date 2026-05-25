@@ -81,8 +81,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 default_image_path = os.path.join(UPLOAD_FOLDER, 'default.jpg')
 if not os.path.exists(default_image_path):
     try:
-        img = Image.new('RGB', (200, 200), color='#1a1a2e')
-        img.save(default_image_path)
+        img = Image.new('RGB', (200, 200), color=(26, 26, 46))
+        img.save(default_image_path, 'JPEG', quality=85)
         print("✅ Default profile image created")
     except Exception as e:
         print(f"⚠️ Could not create default image: {e}")
@@ -299,23 +299,59 @@ def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
 def save_picture(form_picture):
+    """Save and process uploaded image - handles CMYK, RGBA, P modes and resizing"""
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(form_picture.filename)
-    picture_fn = random_hex + f_ext
+    # Always save as .jpg for consistency and to avoid transparency issues
+    picture_fn = random_hex + '.jpg'
     picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_fn)
     
     try:
-        output_size = (500, 500)
         i = Image.open(form_picture)
-        i.thumbnail(output_size)
-        i.save(picture_path)
+        print(f"📸 Original image - Mode: {i.mode}, Size: {i.size}")
+        
+        # Step 1: Convert CMYK to RGB (common in phone photos)
+        if i.mode == 'CMYK':
+            i = i.convert('RGB')
+            print("   ↳ Converted CMYK → RGB")
+        
+        # Step 2: Handle transparency (PNG with alpha channel)
+        if i.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', i.size, (255, 255, 255))
+            background.paste(i, mask=i.split()[-1])  # Use alpha channel as mask
+            i = background
+            print("   ↳ Flattened transparency on white background")
+        elif i.mode == 'P':
+            # Palette images (common in GIFs)
+            i = i.convert('RGBA')
+            background = Image.new('RGB', i.size, (255, 255, 255))
+            background.paste(i, mask=i.split()[-1])
+            i = background
+            print("   ↳ Converted palette image with transparency")
+        elif i.mode != 'RGB':
+            i = i.convert('RGB')
+            print(f"   ↳ Converted {i.mode} → RGB")
+        
+        # Step 3: Resize while maintaining aspect ratio
+        output_size = (800, 800)
+        i.thumbnail(output_size, Image.Resampling.LANCZOS)
+        
+        # Step 4: Save as JPEG with good quality
+        i.save(picture_path, 'JPEG', quality=85, optimize=True)
+        print(f"✅ Image saved: {picture_path} | Final Size: {i.size} | Mode: {i.mode}")
+        
     except Exception as e:
-        print(f"Error saving picture: {e}")
+        print(f"❌ Image processing failed: {e}")
+        # Fallback: save original file with original extension
+        picture_fn = random_hex + f_ext
+        picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_fn)
         form_picture.save(picture_path)
+        print(f"⚠️ Saved original file as fallback: {picture_path}")
     
     return picture_fn
 
 def save_video(file):
+    """Save video and generate thumbnail with proper fallback"""
     random_hex = secrets.token_hex(8)
     _, f_ext = os.path.splitext(file.filename)
     video_fn = random_hex + f_ext
@@ -332,13 +368,18 @@ def save_video(file):
             '-vframes', '1', '-q:v', '2', thumbnail_path
         ], check=True, capture_output=True, timeout=30)
         thumbnail_created = True
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+        print(f"✅ Thumbnail generated from video: {thumbnail_path}")
+    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+        print(f"⚠️ FFmpeg thumbnail generation failed: {e}")
     
     if not thumbnail_created:
         try:
-            Image.new('RGB', (300, 300), color='#1a1a2e').save(thumbnail_path)
-        except Exception:
+            # Create a proper RGB fallback thumbnail (fixed: use tuple not string)
+            img = Image.new('RGB', (300, 300), color=(26, 26, 46))
+            img.save(thumbnail_path, 'JPEG', quality=85)
+            print(f"✅ Fallback thumbnail created: {thumbnail_path}")
+        except Exception as e:
+            print(f"❌ Could not create fallback thumbnail: {e}")
             thumbnail_fn = None
     
     duration = 0
@@ -856,8 +897,7 @@ def create_story():
                 file = request.files['image']
                 if file and file.filename and allowed_image_file(file.filename):
                     filename = save_picture(file)
-                    story.image = filename
-            
+                    story.image = filename            
             if 'video' in request.files:
                 file = request.files['video']
                 if file and file.filename and allowed_video_file(file.filename):
