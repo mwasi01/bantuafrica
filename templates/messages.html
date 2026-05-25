@@ -304,6 +304,22 @@
         background: var(--bg-secondary);
     }
 
+    .refresh-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        margin-left: auto;
+        font-size: 16px;
+        color: var(--text-secondary);
+        transition: color 0.2s;
+        border-radius: 50%;
+    }
+    .refresh-btn:hover {
+        color: var(--accent);
+        background: var(--bg-secondary);
+    }
+
     .empty-chat {
         flex: 1; 
         display: flex; 
@@ -454,11 +470,6 @@
         background: var(--border-color);
         border-radius: 3px;
     }
-    .chat-messages::-webkit-scrollbar-thumb:hover,
-    .conversation-list::-webkit-scrollbar-thumb:hover,
-    .modal-results::-webkit-scrollbar-thumb:hover {
-        background: #ccc;
-    }
 </style>
 
 <div class="messages-container">
@@ -520,6 +531,9 @@
                 <div class="chat-username" id="chatUsername">Select a conversation</div>
                 <div class="chat-status" id="chatStatus"></div>
             </div>
+            <button class="refresh-btn" id="refreshBtn" onclick="manualRefresh()" title="Refresh messages" style="display:none;">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -567,16 +581,11 @@
 
 <script>
     let activeConversation = null;
-    let messagePollInterval;
     let currentUser = '{{ current_user.username }}';
-    const POLL_INTERVAL = 2000; // Increased to 2 seconds to reduce server load
-    let failedAttempts = 0;
-    const MAX_FAILED_ATTEMPTS = 3;
 
     // ============ TOAST NOTIFICATIONS ============
     function showToast(message, type = 'info') {
         document.querySelectorAll('.toast').forEach(t => t.remove());
-        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.textContent = message;
@@ -611,7 +620,6 @@
     let searchTimeout;
     async function searchUsers(query) {
         const resultsDiv = document.getElementById('userSearchResults');
-        
         if (searchTimeout) clearTimeout(searchTimeout);
         
         if (query.length < 2) {
@@ -648,7 +656,6 @@
 
     function startConversation(username, profileImage) {
         closeNewMessageModal();
-        
         const existingConv = document.querySelector(`.conversation-item[data-username="${username}"]`);
         if (existingConv) {
             existingConv.click();
@@ -660,9 +667,7 @@
     // ============ CHAT FUNCTIONS ============
     function openChat(username, profileImage, element) {
         activeConversation = username;
-        failedAttempts = 0; // Reset failed attempts counter
         
-        // Highlight active conversation in the list
         document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
         if (element) {
             element.classList.add('active');
@@ -671,7 +676,6 @@
             if (badge) badge.remove();
         }
         
-        // Update chat header
         document.getElementById('chatUsername').textContent = '@' + username;
         document.getElementById('chatStatus').innerHTML = '<span class="online-dot"></span> Active now';
         document.getElementById('chatAvatar').src = '/static/uploads/' + profileImage;
@@ -680,30 +684,18 @@
             this.src = '/static/uploads/default.jpg';
         };
         
-        // Show chat input area
         document.getElementById('chatInputArea').style.display = 'flex';
+        document.getElementById('refreshBtn').style.display = 'block';
         
-        // Remove placeholder
         const placeholder = document.getElementById('emptyChatPlaceholder');
         if (placeholder) placeholder.remove();
         
-        // Load all messages
         loadMessages(username);
         
-        // On mobile, show the chat window full screen
         if (window.innerWidth <= 768) {
             document.getElementById('chatWindow').classList.add('active');
         }
         
-        // Start polling for new messages
-        clearInterval(messagePollInterval);
-        messagePollInterval = setInterval(() => {
-            if (activeConversation === username) {
-                loadMessagesPoll(username);
-            }
-        }, POLL_INTERVAL);
-        
-        // Focus the message input
         setTimeout(() => {
             const input = document.getElementById('chatInput');
             if (input) input.focus();
@@ -712,10 +704,7 @@
 
     function closeChat() {
         activeConversation = null;
-        clearInterval(messagePollInterval);
-        failedAttempts = 0;
         
-        // Reset to placeholder
         const container = document.getElementById('chatMessages');
         container.innerHTML = `
             <div class="empty-chat" id="emptyChatPlaceholder">
@@ -725,8 +714,8 @@
             </div>
         `;
         
-        // Hide input area
         document.getElementById('chatInputArea').style.display = 'none';
+        document.getElementById('refreshBtn').style.display = 'none';
         document.getElementById('chatAvatar').style.display = 'none';
         document.getElementById('chatUsername').textContent = 'Select a conversation';
         document.getElementById('chatStatus').innerHTML = '';
@@ -736,80 +725,23 @@
         }
     }
 
-    // Full message load
-    async function loadMessages(username) {
-        try {
-            const response = await fetch(`/api/messages/${username}`);
-            
-            if (!response.ok) {
-                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            const container = document.getElementById('chatMessages');
-            
-            // Clear container
-            container.innerHTML = '';
-            
-            if (data.messages && data.messages.length > 0) {
-                // Build all messages
-                data.messages.forEach(msg => {
-                    appendMessageToContainer(container, msg);
-                });
-                scrollToBottom();
-                failedAttempts = 0; // Reset on success
-            } else {
-                // No messages yet
-                const div = document.createElement('div');
-                div.className = 'empty-chat';
-                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>No messages yet. Say hello! 👋</p>';
-                container.appendChild(div);
-            }
-        } catch (error) {
-            console.error('Failed to load messages:', error);
-            failedAttempts++;
-            
-            const container = document.getElementById('chatMessages');
-            // Only show error if we haven't already loaded messages
-            if (!container.querySelector('.message-bubble')) {
-                container.innerHTML = `
-                    <div class="empty-chat">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>Failed to load messages</p>
-                        <button onclick="retryLoadMessages()" style="margin-top:12px; padding:8px 16px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:white; cursor:pointer; font-size:13px;">
-                            <i class="fas fa-redo"></i> Retry
-                        </button>
-                    </div>`;
-            }
-            
-            // If too many failures, stop polling
-            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-                clearInterval(messagePollInterval);
-                showToast('Connection lost. Messages will not update.', 'error');
-            }
-        }
-    }
-
-    // Retry function for the button
-    function retryLoadMessages() {
+    // Manual refresh button
+    function manualRefresh() {
         if (activeConversation) {
-            failedAttempts = 0;
-            loadMessages(activeConversation);
-            // Restart polling if it was stopped
-            clearInterval(messagePollInterval);
-            messagePollInterval = setInterval(() => {
-                if (activeConversation) {
-                    loadMessagesPoll(activeConversation);
-                }
-            }, POLL_INTERVAL);
+            const btn = document.getElementById('refreshBtn');
+            const icon = btn.querySelector('i');
+            icon.className = 'fas fa-spinner fa-spin';
+            loadMessages(activeConversation).then(() => {
+                icon.className = 'fas fa-sync-alt';
+                showToast('Messages refreshed', 'success');
+            }).catch(() => {
+                icon.className = 'fas fa-sync-alt';
+                showToast('Refresh failed', 'error');
+            });
         }
     }
 
-    // Lightweight poll
-    async function loadMessagesPoll(username) {
-        if (!activeConversation || activeConversation !== username) return;
-        if (failedAttempts >= MAX_FAILED_ATTEMPTS) return; // Stop if too many failures
-        
+    async function loadMessages(username) {
         try {
             const response = await fetch(`/api/messages/${username}`);
             
@@ -820,26 +752,36 @@
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
+            // Check if user was at bottom
+            const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+            
+            container.innerHTML = '';
+            
             if (data.messages && data.messages.length > 0) {
-                const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-                
-                container.innerHTML = '';
                 data.messages.forEach(msg => {
                     appendMessageToContainer(container, msg);
                 });
-                
-                if (wasAtBottom) {
+                if (wasAtBottom || container.querySelector('.message-bubble:first-child')) {
                     scrollToBottom();
                 }
-                failedAttempts = 0; // Reset on success
+            } else {
+                const div = document.createElement('div');
+                div.className = 'empty-chat';
+                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>No messages yet. Say hello! 👋</p>';
+                container.appendChild(div);
             }
         } catch (error) {
-            console.debug('Poll failed:', error.message);
-            failedAttempts++;
-            
-            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-                clearInterval(messagePollInterval);
-                console.error('Polling stopped due to too many failures');
+            console.error('Failed to load messages:', error);
+            const container = document.getElementById('chatMessages');
+            if (!container.querySelector('.message-bubble')) {
+                container.innerHTML = `
+                    <div class="empty-chat">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to load messages</p>
+                        <button onclick="manualRefresh()" style="margin-top:12px; padding:8px 16px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:white; cursor:pointer; font-size:13px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
             }
         }
     }
@@ -849,10 +791,20 @@
         const message = input.value.trim();
         if (!message || !activeConversation) return;
         
-        // Clear input immediately
         input.value = '';
         document.getElementById('sendBtn').disabled = true;
         input.style.height = 'auto';
+        
+        // Show optimistic message immediately
+        const container = document.getElementById('chatMessages');
+        const placeholder = container.querySelector('.empty-chat');
+        if (placeholder) placeholder.remove();
+        
+        const tempBubble = document.createElement('div');
+        tempBubble.className = 'message-bubble message-sent';
+        tempBubble.innerHTML = `<div>${escapeHtml(message)}</div><div class="message-time">Sending...</div>`;
+        container.appendChild(tempBubble);
+        scrollToBottom();
         
         try {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -866,20 +818,20 @@
             });
             
             if (response.ok) {
-                // Reload messages from server
+                // Reload messages to get proper data
                 await loadMessages(activeConversation);
-                
-                // Update conversation preview
                 updateConversationPreview(activeConversation, message);
             } else {
-                const errorData = await response.json().catch(() => ({}));
-                showToast(errorData.error || 'Failed to send message', 'error');
-                // Reload to get correct state
-                await loadMessages(activeConversation);
+                tempBubble.style.opacity = '0.5';
+                const timeDiv = tempBubble.querySelector('.message-time');
+                if (timeDiv) timeDiv.textContent = 'Failed to send';
+                showToast('Failed to send message', 'error');
             }
         } catch (error) {
+            tempBubble.style.opacity = '0.5';
+            const timeDiv = tempBubble.querySelector('.message-time');
+            if (timeDiv) timeDiv.textContent = 'Failed to send';
             showToast('Network error. Please try again.', 'error');
-            await loadMessages(activeConversation);
         }
     }
 
@@ -934,16 +886,14 @@
     function autoResize(textarea) {
         textarea.style.height = 'auto';
         textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
-        const sendBtn = document.getElementById('sendBtn');
-        sendBtn.disabled = !textarea.value.trim();
+        document.getElementById('sendBtn').disabled = !textarea.value.trim();
     }
 
     function formatTime(timestamp) {
         if (!timestamp) return '';
         const date = new Date(timestamp);
         const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
+        const diffMins = Math.floor((now - date) / 60000);
         
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return diffMins + 'm ago';
@@ -952,15 +902,10 @@
         const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const diffDays = Math.floor((today - msgDate) / 86400000);
         
-        if (diffDays === 0) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else if (diffDays === 1) {
-            return 'Yesterday';
-        } else if (diffDays < 7) {
-            return diffDays + 'd ago';
-        } else {
-            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-        }
+        if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return diffDays + 'd ago';
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     }
 
     function escapeHtml(str) {
@@ -1017,12 +962,10 @@
             });
             
             if (response.ok) {
-                const data = await response.json();
                 showToast('Image sent successfully', 'success');
                 await loadMessages(activeConversation);
             } else {
-                const errorData = await response.json().catch(() => ({}));
-                showToast(errorData.error || 'Failed to send image', 'error');
+                showToast('Failed to send image', 'error');
             }
         } catch (error) {
             showToast('Failed to send image', 'error');
@@ -1066,10 +1009,6 @@
                 }
             }, 500);
         }
-    });
-
-    window.addEventListener('beforeunload', function() {
-        clearInterval(messagePollInterval);
     });
 </script>
 {% endblock %}
