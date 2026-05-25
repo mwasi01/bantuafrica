@@ -9,6 +9,18 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 import secrets
 
+# ============ CLOUDINARY SETUP ============
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
+print("✅ Cloudinary configured")
+
 # Initialize Flask app
 app = Flask(__name__)
 
@@ -78,14 +90,7 @@ except ImportError:
 
 # Create upload folder and default image
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-default_image_path = os.path.join(UPLOAD_FOLDER, 'default.jpg')
-if not os.path.exists(default_image_path):
-    try:
-        img = Image.new('RGB', (200, 200), color=(26, 26, 46))
-        img.save(default_image_path, 'JPEG', quality=85)
-        print("✅ Default profile image created")
-    except Exception as e:
-        print(f"⚠️ Could not create default image: {e}")
+DEFAULT_IMAGE_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"  # Fallback default
 
 # ============ MODELS ============
 
@@ -94,7 +99,7 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
-    profile_image = db.Column(db.String(20), nullable=False, default='default.jpg')
+    profile_image = db.Column(db.String(500), nullable=False, default='default.jpg')
     bio = db.Column(db.Text, default='')
     location = db.Column(db.String(100))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -141,10 +146,10 @@ class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=True, default='Untitled')
     content = db.Column(db.Text, nullable=False, default='')
-    image = db.Column(db.String(100))
-    video = db.Column(db.String(100))
+    image = db.Column(db.String(500))
+    video = db.Column(db.String(500))
     video_duration = db.Column(db.Integer, default=0)
-    thumbnail = db.Column(db.String(100))
+    thumbnail = db.Column(db.String(500))
     video_processed = db.Column(db.Boolean, default=False)
     category = db.Column(db.String(50), default='general')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -229,8 +234,8 @@ class UserInterest(db.Model):
 
 class Story(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    image = db.Column(db.String(100))
-    video = db.Column(db.String(100))
+    image = db.Column(db.String(500))
+    video = db.Column(db.String(500))
     caption = db.Column(db.Text, default='')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=False)
@@ -242,7 +247,7 @@ class Story(db.Model):
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, default='')
-    image = db.Column(db.String(100))
+    image = db.Column(db.String(500))
     is_read = db.Column(db.Boolean, default=False)
     is_story_reply = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -298,101 +303,100 @@ def allowed_image_file(filename):
 def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
-def save_picture(form_picture):
-    """Save and process uploaded image - handles CMYK, RGBA, P modes and resizing"""
-    random_hex = secrets.token_hex(8)
-    _, f_ext = os.path.splitext(form_picture.filename)
-    # Always save as .jpg for consistency and to avoid transparency issues
-    picture_fn = random_hex + '.jpg'
-    picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_fn)
-    
+def upload_to_cloudinary(file, folder="bantu_uploads", resource_type="image"):
+    """Upload a file to Cloudinary and return the secure URL"""
     try:
+        result = cloudinary.uploader.upload(
+            file,
+            folder=folder,
+            resource_type=resource_type,
+            transformation=[
+                {'width': 800, 'height': 800, 'crop': 'limit', 'quality': 'auto'}
+            ] if resource_type == "image" else []
+        )
+        print(f"✅ Uploaded to Cloudinary: {result['secure_url']}")
+        return result['secure_url']
+    except Exception as e:
+        print(f"❌ Cloudinary upload failed: {e}")
+        return None
+
+def save_picture(form_picture):
+    """Upload image to Cloudinary and return the URL"""
+    try:
+        # Open with PIL to validate the image
         i = Image.open(form_picture)
-        print(f"📸 Original image - Mode: {i.mode}, Size: {i.size}")
+        print(f"📸 Processing image - Mode: {i.mode}, Size: {i.size}")
         
-        # Step 1: Convert CMYK to RGB (common in phone photos)
+        # Reset file pointer for Cloudinary upload
+        form_picture.seek(0)
+        
+        # Upload to Cloudinary
+        url = upload_to_cloudinary(form_picture, folder="bantu_uploads", resource_type="image")
+        if url:
+            return url
+        
+        # Fallback: save locally if Cloudinary fails
+        random_hex = secrets.token_hex(8)
+        picture_fn = random_hex + '.jpg'
+        picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_fn)
+        
+        # Process image
         if i.mode == 'CMYK':
             i = i.convert('RGB')
-            print("   ↳ Converted CMYK → RGB")
-        
-        # Step 2: Handle transparency (PNG with alpha channel)
         if i.mode in ('RGBA', 'LA'):
             background = Image.new('RGB', i.size, (255, 255, 255))
-            background.paste(i, mask=i.split()[-1])  # Use alpha channel as mask
+            background.paste(i, mask=i.split()[-1])
             i = background
-            print("   ↳ Flattened transparency on white background")
         elif i.mode == 'P':
-            # Palette images (common in GIFs)
             i = i.convert('RGBA')
             background = Image.new('RGB', i.size, (255, 255, 255))
             background.paste(i, mask=i.split()[-1])
             i = background
-            print("   ↳ Converted palette image with transparency")
         elif i.mode != 'RGB':
             i = i.convert('RGB')
-            print(f"   ↳ Converted {i.mode} → RGB")
         
-        # Step 3: Resize while maintaining aspect ratio
-        output_size = (800, 800)
-        i.thumbnail(output_size, Image.Resampling.LANCZOS)
-        
-        # Step 4: Save as JPEG with good quality
-        i.save(picture_path, 'JPEG', quality=85, optimize=True)
-        print(f"✅ Image saved: {picture_path} | Final Size: {i.size} | Mode: {i.mode}")
+        i.thumbnail((800, 800), Image.Resampling.LANCZOS)
+        i.save(picture_path, 'JPEG', quality=85)
+        print(f"⚠️ Fallback: Saved locally to {picture_path}")
+        return picture_fn
         
     except Exception as e:
         print(f"❌ Image processing failed: {e}")
-        # Fallback: save original file with original extension
-        picture_fn = random_hex + f_ext
-        picture_path = os.path.join(app.config['UPLOAD_FOLDER'], picture_fn)
-        form_picture.save(picture_path)
-        print(f"⚠️ Saved original file as fallback: {picture_path}")
-    
-    return picture_fn
+        return None
 
 def save_video(file):
-    """Save video and generate thumbnail with proper fallback"""
-    random_hex = secrets.token_hex(8)
-    _, f_ext = os.path.splitext(file.filename)
-    video_fn = random_hex + f_ext
-    video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_fn)
-    file.save(video_path)
-    
-    thumbnail_fn = random_hex + '.jpg'
-    thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], thumbnail_fn)
-    
-    thumbnail_created = False
+    """Upload video to Cloudinary and return URLs"""
     try:
-        subprocess.run([
-            'ffmpeg', '-i', video_path, '-ss', '00:00:01',
-            '-vframes', '1', '-q:v', '2', thumbnail_path
-        ], check=True, capture_output=True, timeout=30)
-        thumbnail_created = True
-        print(f"✅ Thumbnail generated from video: {thumbnail_path}")
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
-        print(f"⚠️ FFmpeg thumbnail generation failed: {e}")
-    
-    if not thumbnail_created:
+        # Upload video to Cloudinary
+        video_url = upload_to_cloudinary(file, folder="bantu_videos", resource_type="video")
+        
+        if video_url:
+            # Generate thumbnail URL from Cloudinary
+            thumbnail_url = video_url.replace('/upload/', '/upload/c_thumb,w_300,h_300/')
+            return video_url, thumbnail_url, 0
+        
+        # Fallback: save locally
+        random_hex = secrets.token_hex(8)
+        _, f_ext = os.path.splitext(file.filename)
+        video_fn = random_hex + f_ext
+        video_path = os.path.join(app.config['UPLOAD_FOLDER'], video_fn)
+        file.save(video_path)
+        
+        thumbnail_fn = random_hex + '.jpg'
+        thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], thumbnail_fn)
+        
         try:
-            # Create a proper RGB fallback thumbnail (fixed: use tuple not string)
             img = Image.new('RGB', (300, 300), color=(26, 26, 46))
             img.save(thumbnail_path, 'JPEG', quality=85)
-            print(f"✅ Fallback thumbnail created: {thumbnail_path}")
-        except Exception as e:
-            print(f"❌ Could not create fallback thumbnail: {e}")
+        except:
             thumbnail_fn = None
-    
-    duration = 0
-    try:
-        result = subprocess.run([
-            'ffprobe', '-v', 'error', '-show_entries', 'format=duration',
-            '-of', 'default=noprint_wrappers=1:nokey=1', video_path
-        ], capture_output=True, text=True, timeout=10)
-        duration = int(float(result.stdout.strip()))
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired, ValueError):
-        pass
-    
-    return video_fn, thumbnail_fn, duration
+        
+        print(f"⚠️ Fallback: Saved video locally")
+        return video_fn, thumbnail_fn, 0
+        
+    except Exception as e:
+        print(f"❌ Video upload failed: {e}")
+        return None, None, 0
 
 def update_user_interests(user, post):
     if post and post.category:
@@ -635,8 +639,9 @@ def update_profile():
             if 'profile_image' in request.files:
                 file = request.files['profile_image']
                 if file and file.filename and allowed_image_file(file.filename):
-                    filename = save_picture(file)
-                    current_user.profile_image = filename
+                    url = save_picture(file)
+                    if url:
+                        current_user.profile_image = url
             
             db.session.commit()
             flash('Profile updated successfully!', 'success')
@@ -672,17 +677,19 @@ def new_post():
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_image_file(file.filename):
-                    filename = save_picture(file)
-                    post.image = filename
+                    url = save_picture(file)
+                    if url:
+                        post.image = url
             
             if 'video' in request.files:
                 file = request.files['video']
                 if file and file.filename and allowed_video_file(file.filename):
-                    video_fn, thumbnail_fn, duration = save_video(file)
-                    post.video = video_fn
-                    post.thumbnail = thumbnail_fn
-                    post.video_duration = duration
-                    post.video_processed = True
+                    video_url, thumbnail_url, duration = save_video(file)
+                    if video_url:
+                        post.video = video_url
+                        post.thumbnail = thumbnail_url
+                        post.video_duration = duration
+                        post.video_processed = True
             
             db.session.add(post)
             db.session.commit()
@@ -714,13 +721,6 @@ def delete_post(post_id):
         return redirect(url_for('home'))
     
     try:
-        for file_attr in ['video', 'thumbnail', 'image']:
-            filename = getattr(post, file_attr)
-            if filename:
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-        
         db.session.delete(post)
         db.session.commit()
         flash('Post deleted!', 'success')
@@ -777,7 +777,7 @@ def add_comment(post_id):
             'comment': {
                 'content': comment.content,
                 'author': comment.author.username,
-                'author_image': url_for('static', filename=f'uploads/{comment.author.profile_image}'),
+                'author_image': url_for('static', filename=f'uploads/{comment.author.profile_image}') if not comment.author.profile_image.startswith('http') else comment.author.profile_image,
                 'created_at': comment.created_at.strftime('%b %d, %Y')
             },
             'comment_count': post.comment_count()
@@ -896,13 +896,16 @@ def create_story():
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_image_file(file.filename):
-                    filename = save_picture(file)
-                    story.image = filename            
+                    url = save_picture(file)
+                    if url:
+                        story.image = url
+            
             if 'video' in request.files:
                 file = request.files['video']
                 if file and file.filename and allowed_video_file(file.filename):
-                    video_fn, _, _ = save_video(file)
-                    story.video = video_fn
+                    video_url, _, _ = save_video(file)
+                    if video_url:
+                        story.video = video_url
             
             if not story.image and not story.video:
                 flash('Please upload an image or video for your story.', 'danger')
@@ -1024,16 +1027,19 @@ def api_send_image():
         return jsonify({'error': 'Invalid image'}), 400
     
     try:
-        filename = save_picture(file)
-        message = Message(
-            content='📷 Image',
-            image=filename,
-            sender_id=current_user.id,
-            recipient_id=recipient.id
-        )
-        db.session.add(message)
-        db.session.commit()
-        return jsonify(message.to_dict())
+        url = save_picture(file)
+        if url:
+            message = Message(
+                content='📷 Image',
+                image=url,
+                sender_id=current_user.id,
+                recipient_id=recipient.id
+            )
+            db.session.add(message)
+            db.session.commit()
+            return jsonify(message.to_dict())
+        else:
+            return jsonify({'error': 'Failed to upload image'}), 500
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
