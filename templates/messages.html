@@ -569,7 +569,9 @@
     let activeConversation = null;
     let messagePollInterval;
     let currentUser = '{{ current_user.username }}';
-    const POLL_INTERVAL = 1000; // 1 second polling interval
+    const POLL_INTERVAL = 2000; // Increased to 2 seconds to reduce server load
+    let failedAttempts = 0;
+    const MAX_FAILED_ATTEMPTS = 3;
 
     // ============ TOAST NOTIFICATIONS ============
     function showToast(message, type = 'info') {
@@ -655,17 +657,10 @@
         }
     }
 
-    // ============ HELPER: Remove empty chat placeholder ============
-    function removeEmptyPlaceholder() {
-        const placeholder = document.getElementById('emptyChatPlaceholder');
-        if (placeholder) {
-            placeholder.remove();
-        }
-    }
-
     // ============ CHAT FUNCTIONS ============
     function openChat(username, profileImage, element) {
         activeConversation = username;
+        failedAttempts = 0; // Reset failed attempts counter
         
         // Highlight active conversation in the list
         document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
@@ -688,10 +683,11 @@
         // Show chat input area
         document.getElementById('chatInputArea').style.display = 'flex';
         
-        // CRITICAL: Remove the "Your Messages" placeholder immediately
-        removeEmptyPlaceholder();
+        // Remove placeholder
+        const placeholder = document.getElementById('emptyChatPlaceholder');
+        if (placeholder) placeholder.remove();
         
-        // Load all messages for this conversation
+        // Load all messages
         loadMessages(username);
         
         // On mobile, show the chat window full screen
@@ -699,7 +695,7 @@
             document.getElementById('chatWindow').classList.add('active');
         }
         
-        // Start polling for new messages every 1 second
+        // Start polling for new messages
         clearInterval(messagePollInterval);
         messagePollInterval = setInterval(() => {
             if (activeConversation === username) {
@@ -717,6 +713,7 @@
     function closeChat() {
         activeConversation = null;
         clearInterval(messagePollInterval);
+        failedAttempts = 0;
         
         // Reset to placeholder
         const container = document.getElementById('chatMessages');
@@ -739,14 +736,19 @@
         }
     }
 
-    // Full message load (used for initial open)
+    // Full message load
     async function loadMessages(username) {
         try {
             const response = await fetch(`/api/messages/${username}`);
+            
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
-            // Clear container completely
+            // Clear container
             container.innerHTML = '';
             
             if (data.messages && data.messages.length > 0) {
@@ -755,8 +757,9 @@
                     appendMessageToContainer(container, msg);
                 });
                 scrollToBottom();
+                failedAttempts = 0; // Reset on success
             } else {
-                // No messages yet, show a small prompt (NOT the big placeholder)
+                // No messages yet
                 const div = document.createElement('div');
                 div.className = 'empty-chat';
                 div.innerHTML = '<i class="fas fa-comment-dots"></i><p>No messages yet. Say hello! 👋</p>';
@@ -764,37 +767,80 @@
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
+            failedAttempts++;
+            
             const container = document.getElementById('chatMessages');
-            container.innerHTML = '<div class="empty-chat"><i class="fas fa-exclamation-circle"></i><p>Failed to load messages</p></div>';
+            // Only show error if we haven't already loaded messages
+            if (!container.querySelector('.message-bubble')) {
+                container.innerHTML = `
+                    <div class="empty-chat">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to load messages</p>
+                        <button onclick="retryLoadMessages()" style="margin-top:12px; padding:8px 16px; border-radius:20px; border:1px solid var(--accent); background:var(--accent); color:white; cursor:pointer; font-size:13px;">
+                            <i class="fas fa-redo"></i> Retry
+                        </button>
+                    </div>`;
+            }
+            
+            // If too many failures, stop polling
+            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+                clearInterval(messagePollInterval);
+                showToast('Connection lost. Messages will not update.', 'error');
+            }
         }
     }
 
-    // Lightweight poll that preserves scroll position
+    // Retry function for the button
+    function retryLoadMessages() {
+        if (activeConversation) {
+            failedAttempts = 0;
+            loadMessages(activeConversation);
+            // Restart polling if it was stopped
+            clearInterval(messagePollInterval);
+            messagePollInterval = setInterval(() => {
+                if (activeConversation) {
+                    loadMessagesPoll(activeConversation);
+                }
+            }, POLL_INTERVAL);
+        }
+    }
+
+    // Lightweight poll
     async function loadMessagesPoll(username) {
         if (!activeConversation || activeConversation !== username) return;
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) return; // Stop if too many failures
         
         try {
             const response = await fetch(`/api/messages/${username}`);
+            
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}`);
+            }
+            
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
             if (data.messages && data.messages.length > 0) {
-                // Check if user was at the bottom before updating
                 const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
                 
-                // Rebuild messages (this is safe because we already removed placeholder)
                 container.innerHTML = '';
                 data.messages.forEach(msg => {
                     appendMessageToContainer(container, msg);
                 });
                 
-                // Only auto-scroll if user was already at the bottom
                 if (wasAtBottom) {
                     scrollToBottom();
                 }
+                failedAttempts = 0; // Reset on success
             }
         } catch (error) {
-            // Silent fail for polling
+            console.debug('Poll failed:', error.message);
+            failedAttempts++;
+            
+            if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+                clearInterval(messagePollInterval);
+                console.error('Polling stopped due to too many failures');
+            }
         }
     }
 
@@ -820,19 +866,19 @@
             });
             
             if (response.ok) {
-                // Reload messages from server (this will show the message with proper data)
+                // Reload messages from server
                 await loadMessages(activeConversation);
                 
-                // Update conversation preview in the list
+                // Update conversation preview
                 updateConversationPreview(activeConversation, message);
             } else {
-                showToast('Failed to send message', 'error');
-                // Reload anyway to get correct state
+                const errorData = await response.json().catch(() => ({}));
+                showToast(errorData.error || 'Failed to send message', 'error');
+                // Reload to get correct state
                 await loadMessages(activeConversation);
             }
         } catch (error) {
-            showToast('Failed to send message', 'error');
-            // Reload to get correct state
+            showToast('Network error. Please try again.', 'error');
             await loadMessages(activeConversation);
         }
     }
@@ -854,11 +900,9 @@
     function appendMessageToContainer(container, msg) {
         const isSent = msg.sender === currentUser || msg.is_sent;
         
-        // Create message bubble
         const bubble = document.createElement('div');
         bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
         
-        // Add image if present
         if (msg.image) {
             const img = document.createElement('img');
             img.src = `/static/uploads/${msg.image}`;
@@ -868,32 +912,16 @@
             bubble.appendChild(img);
         }
         
-        // Add message content
         const contentDiv = document.createElement('div');
         contentDiv.textContent = msg.content;
         bubble.appendChild(contentDiv);
         
-        // Add timestamp
         const timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         timeDiv.textContent = formatTime(msg.created_at);
         bubble.appendChild(timeDiv);
         
         container.appendChild(bubble);
-    }
-
-    function appendMessage(msg, scroll = false) {
-        const container = document.getElementById('chatMessages');
-        
-        // CRITICAL: Remove placeholder if it exists
-        const placeholder = container.querySelector('.empty-chat');
-        if (placeholder && placeholder.id === 'emptyChatPlaceholder') {
-            placeholder.remove();
-        }
-        
-        appendMessageToContainer(container, msg);
-        
-        if (scroll) scrollToBottom();
     }
 
     function scrollToBottom() {
@@ -1001,12 +1029,10 @@
         }
     }
 
-    // Input event listener for send button state
     document.getElementById('chatInput').addEventListener('input', function() {
         document.getElementById('sendBtn').disabled = !this.value.trim();
     });
 
-    // Handle paste event for images (Ctrl+V)
     document.getElementById('chatInput').addEventListener('paste', function(e) {
         const items = e.clipboardData.items;
         for (let item of items) {
@@ -1021,14 +1047,12 @@
         }
     });
 
-    // Handle window resize for responsive behavior
     window.addEventListener('resize', function() {
         if (window.innerWidth > 768 && activeConversation) {
             document.getElementById('chatWindow').classList.remove('active');
         }
     });
 
-    // ============ AUTO-OPEN CONVERSATION FROM URL ============
     document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user');
@@ -1044,7 +1068,6 @@
         }
     });
 
-    // Cleanup polling when leaving the page
     window.addEventListener('beforeunload', function() {
         clearInterval(messagePollInterval);
     });
