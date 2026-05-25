@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Like button functionality (global)
+    // Like button functionality (global) - FIXED: Added CSRF token
     document.addEventListener('click', function(e) {
         if (e.target.closest('.like-btn')) {
             const button = e.target.closest('.like-btn');
@@ -62,10 +62,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const likeCountSpan = button.querySelector('.like-count');
             const heartIcon = button.querySelector('i');
             
+            // Get CSRF token from meta tag
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+            
             fetch(`/api/post/${postId}/like`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken  // ADDED: CSRF token for security
                 }
             })
             .then(response => response.json())
