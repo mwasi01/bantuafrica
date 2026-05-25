@@ -568,6 +568,7 @@
 <script>
     let activeConversation = null;
     let messagePollInterval;
+    let currentUser = '{{ current_user.username }}';
     const POLL_INTERVAL = 1000; // 1 second polling interval
 
     // ============ TOAST NOTIFICATIONS ============
@@ -658,14 +659,7 @@
     function removeEmptyPlaceholder() {
         const placeholder = document.getElementById('emptyChatPlaceholder');
         if (placeholder) {
-            placeholder.style.display = 'none';
-        }
-    }
-
-    function showEmptyPlaceholder() {
-        const placeholder = document.getElementById('emptyChatPlaceholder');
-        if (placeholder) {
-            placeholder.style.display = 'flex';
+            placeholder.remove();
         }
     }
 
@@ -694,7 +688,7 @@
         // Show chat input area
         document.getElementById('chatInputArea').style.display = 'flex';
         
-        // Remove the empty placeholder immediately when opening a chat
+        // CRITICAL: Remove the "Your Messages" placeholder immediately
         removeEmptyPlaceholder();
         
         // Load all messages for this conversation
@@ -724,55 +718,54 @@
         activeConversation = null;
         clearInterval(messagePollInterval);
         
-        // Reset chat window to show placeholder
+        // Reset to placeholder
         const container = document.getElementById('chatMessages');
-        container.innerHTML = '';
-        container.appendChild(getEmptyPlaceholderElement());
-        showEmptyPlaceholder();
+        container.innerHTML = `
+            <div class="empty-chat" id="emptyChatPlaceholder">
+                <i class="fas fa-paper-plane"></i>
+                <h3>Your Messages</h3>
+                <p>Send messages to your friends and community</p>
+            </div>
+        `;
+        
+        // Hide input area
+        document.getElementById('chatInputArea').style.display = 'none';
+        document.getElementById('chatAvatar').style.display = 'none';
+        document.getElementById('chatUsername').textContent = 'Select a conversation';
+        document.getElementById('chatStatus').innerHTML = '';
         
         if (window.innerWidth <= 768) {
             document.getElementById('chatWindow').classList.remove('active');
         }
     }
 
-    function getEmptyPlaceholderElement() {
-        const div = document.createElement('div');
-        div.className = 'empty-chat';
-        div.id = 'emptyChatPlaceholder';
-        div.innerHTML = `
-            <i class="fas fa-paper-plane"></i>
-            <h3>Your Messages</h3>
-            <p>Send messages to your friends and community</p>
-        `;
-        return div;
-    }
-
-    // Full message load (used for initial open and after sending)
+    // Full message load (used for initial open)
     async function loadMessages(username) {
         try {
             const response = await fetch(`/api/messages/${username}`);
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
-            // Always remove placeholder first
-            removeEmptyPlaceholder();
-            
-            // Clear container
+            // Clear container completely
             container.innerHTML = '';
             
             if (data.messages && data.messages.length > 0) {
                 // Build all messages
-                data.messages.forEach(msg => appendMessage(msg, false));
+                data.messages.forEach(msg => {
+                    appendMessageToContainer(container, msg);
+                });
                 scrollToBottom();
             } else {
-                // No messages yet, show a small prompt
+                // No messages yet, show a small prompt (NOT the big placeholder)
                 const div = document.createElement('div');
                 div.className = 'empty-chat';
-                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>Start the conversation!</p>';
+                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>No messages yet. Say hello! 👋</p>';
                 container.appendChild(div);
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '<div class="empty-chat"><i class="fas fa-exclamation-circle"></i><p>Failed to load messages</p></div>';
         }
     }
 
@@ -785,28 +778,20 @@
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
-            // Remove placeholder if it's somehow still there
-            removeEmptyPlaceholder();
-            
             if (data.messages && data.messages.length > 0) {
                 // Check if user was at the bottom before updating
                 const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
                 
-                // Rebuild messages
+                // Rebuild messages (this is safe because we already removed placeholder)
                 container.innerHTML = '';
-                data.messages.forEach(msg => appendMessage(msg, false));
+                data.messages.forEach(msg => {
+                    appendMessageToContainer(container, msg);
+                });
                 
                 // Only auto-scroll if user was already at the bottom
                 if (wasAtBottom) {
                     scrollToBottom();
                 }
-            } else {
-                // No messages
-                container.innerHTML = '';
-                const div = document.createElement('div');
-                div.className = 'empty-chat';
-                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>Start the conversation!</p>';
-                container.appendChild(div);
             }
         } catch (error) {
             // Silent fail for polling
@@ -818,22 +803,10 @@
         const message = input.value.trim();
         if (!message || !activeConversation) return;
         
-        // Remove placeholder if present
-        removeEmptyPlaceholder();
-        
-        // Optimistic UI - show message immediately
-        appendMessage({ 
-            content: message, 
-            sender: '{{ current_user.username }}', 
-            created_at: new Date().toISOString(), 
-            is_sent: true 
-        }, true);
-        
-        // Clear input
+        // Clear input immediately
         input.value = '';
         document.getElementById('sendBtn').disabled = true;
         input.style.height = 'auto';
-        scrollToBottom();
         
         try {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
@@ -847,27 +820,39 @@
             });
             
             if (response.ok) {
-                // Reload messages to get server-confirmed version
+                // Reload messages from server (this will show the message with proper data)
                 await loadMessages(activeConversation);
-                // Refresh the page to update conversation list for both users
-                setTimeout(() => location.reload(), 500);
+                
+                // Update conversation preview in the list
+                updateConversationPreview(activeConversation, message);
             } else {
                 showToast('Failed to send message', 'error');
+                // Reload anyway to get correct state
+                await loadMessages(activeConversation);
             }
         } catch (error) {
             showToast('Failed to send message', 'error');
+            // Reload to get correct state
+            await loadMessages(activeConversation);
         }
     }
 
-    function appendMessage(msg, scroll = false) {
-        const container = document.getElementById('chatMessages');
-        const isSent = msg.sender === '{{ current_user.username }}' || msg.is_sent;
-        
-        // CRITICAL: Remove any empty-chat placeholder before appending
-        const placeholder = container.querySelector('.empty-chat');
-        if (placeholder) {
-            placeholder.remove();
+    function updateConversationPreview(username, message) {
+        const convItem = document.querySelector(`.conversation-item[data-username="${username}"]`);
+        if (convItem) {
+            const preview = convItem.querySelector('.conv-preview');
+            const time = convItem.querySelector('.conv-time');
+            if (preview) {
+                preview.textContent = message.substring(0, 30) + (message.length > 30 ? '...' : '');
+            }
+            if (time) {
+                time.textContent = 'Just now';
+            }
         }
+    }
+
+    function appendMessageToContainer(container, msg) {
+        const isSent = msg.sender === currentUser || msg.is_sent;
         
         // Create message bubble
         const bubble = document.createElement('div');
@@ -895,6 +880,19 @@
         bubble.appendChild(timeDiv);
         
         container.appendChild(bubble);
+    }
+
+    function appendMessage(msg, scroll = false) {
+        const container = document.getElementById('chatMessages');
+        
+        // CRITICAL: Remove placeholder if it exists
+        const placeholder = container.querySelector('.empty-chat');
+        if (placeholder && placeholder.id === 'emptyChatPlaceholder') {
+            placeholder.remove();
+        }
+        
+        appendMessageToContainer(container, msg);
+        
         if (scroll) scrollToBottom();
     }
 
@@ -992,10 +990,8 @@
             
             if (response.ok) {
                 const data = await response.json();
-                appendMessage(data, true);
                 showToast('Image sent successfully', 'success');
                 await loadMessages(activeConversation);
-                setTimeout(() => location.reload(), 500);
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 showToast(errorData.error || 'Failed to send image', 'error');
