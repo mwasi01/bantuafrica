@@ -54,14 +54,13 @@ a { color: inherit; text-decoration: none; }
 }
 .btn-primary:hover { background: var(--accent-hover); }
 
-/* ============ TIKTOK-STYLE VERTICAL FEED ============ */
+/* ============ TIKTOK-STYLE FEED ============ */
 .feed-container {
     height: 100vh;
     height: 100dvh;
     overflow-y: scroll;
     scroll-snap-type: y mandatory;
     background: #000;
-    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -70,46 +69,43 @@ a { color: inherit; text-decoration: none; }
     height: 100dvh;
     scroll-snap-align: start;
     position: relative;
+    background: #000;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
     overflow: hidden;
 }
 
+/* CRITICAL: Image/Video must fill the card */
 .post-media {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
+    object-fit: contain;
+    display: block;
 }
 
+/* Text-only posts */
 .text-only-post {
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 1;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    padding: 40px;
+    text-align: center;
 }
 
-/* Bottom gradient overlay - this is INTENTIONAL for readability */
+/* Bottom info overlay */
 .post-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 2;
-    padding: 80px 16px 100px;
-    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+    z-index: 10;
+    padding: 80px 16px 90px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
     pointer-events: none;
 }
 
@@ -129,78 +125,99 @@ a { color: inherit; text-decoration: none; }
 }
 
 .post-author img {
-    width: 36px;
-    height: 36px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba(255,255,255,0.5);
+    border: 2px solid rgba(255,255,255,0.6);
+    flex-shrink: 0;
 }
 
 .post-author .username {
     color: white;
     font-weight: 600;
     font-size: 15px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 
 .post-caption {
-    color: rgba(255,255,255,0.9);
+    color: rgba(255,255,255,0.95);
     font-size: 14px;
     line-height: 1.4;
     margin-bottom: 6px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .post-meta {
     display: flex;
     gap: 10px;
-    font-size: 12px;
+    font-size: 11px;
     color: rgba(255,255,255,0.7);
+    align-items: center;
 }
 
 .post-category {
     background: rgba(255,255,255,0.2);
     padding: 2px 8px;
     border-radius: 10px;
-    font-size: 11px;
+    font-size: 10px;
+    text-transform: capitalize;
 }
 
 /* Right Side Action Buttons */
 .post-actions {
     position: absolute;
     right: 12px;
-    bottom: 120px;
+    bottom: 130px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    z-index: 3;
+    gap: 20px;
+    z-index: 20;
 }
 
 .action-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    gap: 3px;
     background: none;
     border: none;
     color: white;
     cursor: pointer;
-    font-size: 24px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    transition: transform 0.2s;
+    font-size: 28px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    transition: transform 0.15s ease;
+    padding: 0;
 }
 
-.action-btn:hover {
-    transform: scale(1.1);
+.action-btn:active {
+    transform: scale(0.85);
 }
 
-.action-btn.liked {
-    color: #ff2d55;
+.action-btn i {
+    pointer-events: none;
 }
 
 .action-btn .count {
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+}
+
+/* Liked state */
+.action-btn.liked i {
+    color: #ff2d55 !important;
+    animation: heartPop 0.3s ease;
+}
+
+@keyframes heartPop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.3); }
+    100% { transform: scale(1); }
 }
 
 /* Follow Button */
@@ -208,17 +225,19 @@ a { color: inherit; text-decoration: none; }
     background: var(--accent);
     color: white;
     border: none;
-    padding: 4px 14px;
-    border-radius: 15px;
+    padding: 5px 16px;
+    border-radius: 16px;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .follow-btn.following {
-    background: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.25);
     color: white;
+    border: 1px solid rgba(255,255,255,0.3);
 }
 
 /* ============ MOBILE BOTTOM NAVIGATION ============ */
@@ -228,10 +247,10 @@ a { color: inherit; text-decoration: none; }
     bottom: 0;
     left: 0;
     right: 0;
-    background: rgba(255,255,255,0.95);
+    background: rgba(0,0,0,0.95);
     backdrop-filter: blur(10px);
-    border-top: 1px solid var(--border-color);
-    padding: 8px 0 env(safe-area-inset-bottom, 8px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 0 env(safe-area-inset-bottom, 6px);
     z-index: 1000;
     justify-content: space-around;
 }
@@ -241,85 +260,62 @@ a { color: inherit; text-decoration: none; }
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    color: var(--text-secondary);
+    color: rgba(255,255,255,0.6);
     font-size: 10px;
     text-decoration: none;
     transition: color 0.2s;
 }
 
-.mobile-nav-item.active { color: var(--accent); }
+.mobile-nav-item.active {
+    color: white;
+}
 
 .mobile-nav-item i {
-    font-size: 20px;
+    font-size: 22px;
 }
 
 .mobile-nav-item.create-btn {
     background: var(--accent);
     color: white;
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: -20px;
-    font-size: 20px;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-/* ============ TOAST NOTIFICATIONS ============ */
-.toast-container {
-    position: fixed;
-    bottom: 90px;
-    right: 16px;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.toast {
-    background: #333;
-    color: white;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: toastIn 0.3s ease;
-}
-
-.toast.success { background: #22c55e; }
-.toast.error { background: #ef4444; }
-.toast.info { background: #3b82f6; }
-
-@keyframes toastIn {
-    from { opacity: 0; transform: translateX(100%); }
-    to { opacity: 1; transform: translateX(0); }
+    margin-top: -22px;
+    font-size: 22px;
+    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
 }
 
 /* ============ RESPONSIVE ============ */
 @media (max-width: 768px) {
-    .mobile-nav { display: flex; }
-    
-    .desktop-nav { display: none !important; }
-    
-    .post-overlay { 
-        padding-bottom: 140px;
-        background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+    .mobile-nav {
+        display: flex;
     }
     
-    .post-actions { bottom: 160px; }
+    .desktop-nav {
+        display: none !important;
+    }
     
-    .toast-container { bottom: 110px; }
-}
-
-/* Hide desktop-specific elements on mobile */
-@media (max-width: 768px) {
+    .post-overlay {
+        padding: 60px 12px 130px;
+    }
+    
+    .post-actions {
+        right: 8px;
+        bottom: 160px;
+        gap: 18px;
+    }
+    
+    .action-btn {
+        font-size: 26px;
+    }
+    
     .d-none.d-lg-block,
-    .d-none.d-lg-flex { display: none !important; }
+    .d-none.d-lg-flex {
+        display: none !important;
+    }
 }
 
 @media (min-width: 769px) {
