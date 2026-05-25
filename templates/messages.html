@@ -523,7 +523,7 @@
         </div>
         
         <div class="chat-messages" id="chatMessages">
-            <div class="empty-chat">
+            <div class="empty-chat" id="emptyChatPlaceholder">
                 <i class="fas fa-paper-plane"></i>
                 <h3>Your Messages</h3>
                 <p>Send messages to your friends and community</p>
@@ -572,7 +572,6 @@
 
     // ============ TOAST NOTIFICATIONS ============
     function showToast(message, type = 'info') {
-        // Remove existing toasts to prevent stacking
         document.querySelectorAll('.toast').forEach(t => t.remove());
         
         const toast = document.createElement('div');
@@ -598,12 +597,10 @@
         document.getElementById('newMessageModal').classList.remove('active');
     }
 
-    // Close modal when clicking outside
     document.getElementById('newMessageModal').addEventListener('click', function(e) {
         if (e.target === this) closeNewMessageModal();
     });
 
-    // Close modal on Escape key
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeNewMessageModal();
     });
@@ -612,7 +609,6 @@
     async function searchUsers(query) {
         const resultsDiv = document.getElementById('userSearchResults');
         
-        // Clear previous timeout for debouncing
         if (searchTimeout) clearTimeout(searchTimeout);
         
         if (query.length < 2) {
@@ -622,7 +618,6 @@
         
         resultsDiv.innerHTML = '<div class="modal-no-results"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
         
-        // Debounce search requests by 300ms
         searchTimeout = setTimeout(async () => {
             try {
                 const response = await fetch(`/api/search-users?q=${encodeURIComponent(query)}`);
@@ -651,12 +646,26 @@
     function startConversation(username, profileImage) {
         closeNewMessageModal();
         
-        // Check if conversation already exists in the list
         const existingConv = document.querySelector(`.conversation-item[data-username="${username}"]`);
         if (existingConv) {
             existingConv.click();
         } else {
             openChat(username, profileImage, null);
+        }
+    }
+
+    // ============ HELPER: Remove empty chat placeholder ============
+    function removeEmptyPlaceholder() {
+        const placeholder = document.getElementById('emptyChatPlaceholder');
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+    }
+
+    function showEmptyPlaceholder() {
+        const placeholder = document.getElementById('emptyChatPlaceholder');
+        if (placeholder) {
+            placeholder.style.display = 'flex';
         }
     }
 
@@ -668,7 +677,6 @@
         document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
         if (element) {
             element.classList.add('active');
-            // Remove unread status
             element.classList.remove('unread');
             const badge = element.querySelector('.unread-badge');
             if (badge) badge.remove();
@@ -685,6 +693,9 @@
         
         // Show chat input area
         document.getElementById('chatInputArea').style.display = 'flex';
+        
+        // Remove the empty placeholder immediately when opening a chat
+        removeEmptyPlaceholder();
         
         // Load all messages for this conversation
         loadMessages(username);
@@ -713,9 +724,27 @@
         activeConversation = null;
         clearInterval(messagePollInterval);
         
+        // Reset chat window to show placeholder
+        const container = document.getElementById('chatMessages');
+        container.innerHTML = '';
+        container.appendChild(getEmptyPlaceholderElement());
+        showEmptyPlaceholder();
+        
         if (window.innerWidth <= 768) {
             document.getElementById('chatWindow').classList.remove('active');
         }
+    }
+
+    function getEmptyPlaceholderElement() {
+        const div = document.createElement('div');
+        div.className = 'empty-chat';
+        div.id = 'emptyChatPlaceholder';
+        div.innerHTML = `
+            <i class="fas fa-paper-plane"></i>
+            <h3>Your Messages</h3>
+            <p>Send messages to your friends and community</p>
+        `;
+        return div;
     }
 
     // Full message load (used for initial open and after sending)
@@ -725,13 +754,22 @@
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
+            // Always remove placeholder first
+            removeEmptyPlaceholder();
+            
+            // Clear container
+            container.innerHTML = '';
+            
             if (data.messages && data.messages.length > 0) {
-                // Clear and rebuild the entire chat
-                container.innerHTML = '';
+                // Build all messages
                 data.messages.forEach(msg => appendMessage(msg, false));
                 scrollToBottom();
             } else {
-                container.innerHTML = `<div class="empty-chat"><i class="fas fa-comment-dots"></i><p>Start the conversation!</p></div>`;
+                // No messages yet, show a small prompt
+                const div = document.createElement('div');
+                div.className = 'empty-chat';
+                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>Start the conversation!</p>';
+                container.appendChild(div);
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
@@ -747,6 +785,9 @@
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
+            // Remove placeholder if it's somehow still there
+            removeEmptyPlaceholder();
+            
             if (data.messages && data.messages.length > 0) {
                 // Check if user was at the bottom before updating
                 const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
@@ -756,13 +797,19 @@
                 data.messages.forEach(msg => appendMessage(msg, false));
                 
                 // Only auto-scroll if user was already at the bottom
-                // This allows reading old messages without being jerked down
                 if (wasAtBottom) {
                     scrollToBottom();
                 }
+            } else {
+                // No messages
+                container.innerHTML = '';
+                const div = document.createElement('div');
+                div.className = 'empty-chat';
+                div.innerHTML = '<i class="fas fa-comment-dots"></i><p>Start the conversation!</p>';
+                container.appendChild(div);
             }
         } catch (error) {
-            // Silent fail for polling - don't bother the user
+            // Silent fail for polling
         }
     }
 
@@ -771,7 +818,10 @@
         const message = input.value.trim();
         if (!message || !activeConversation) return;
         
-        // Optimistic UI - show message immediately before server confirms
+        // Remove placeholder if present
+        removeEmptyPlaceholder();
+        
+        // Optimistic UI - show message immediately
         appendMessage({ 
             content: message, 
             sender: '{{ current_user.username }}', 
@@ -813,8 +863,11 @@
         const container = document.getElementById('chatMessages');
         const isSent = msg.sender === '{{ current_user.username }}' || msg.is_sent;
         
-        // Remove empty chat placeholder if present
-        if (container.querySelector('.empty-chat')) container.innerHTML = '';
+        // CRITICAL: Remove any empty-chat placeholder before appending
+        const placeholder = container.querySelector('.empty-chat');
+        if (placeholder) {
+            placeholder.remove();
+        }
         
         // Create message bubble
         const bubble = document.createElement('div');
@@ -910,7 +963,6 @@
         input.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                // Check file size (max 10MB)
                 if (file.size > 10 * 1024 * 1024) {
                     showToast('Image must be less than 10MB', 'error');
                     return;
@@ -942,7 +994,6 @@
                 const data = await response.json();
                 appendMessage(data, true);
                 showToast('Image sent successfully', 'success');
-                // Reload messages and refresh conversation list
                 await loadMessages(activeConversation);
                 setTimeout(() => location.reload(), 500);
             } else {
@@ -986,13 +1037,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const userParam = urlParams.get('user');
         if (userParam) {
-            // Small delay to ensure DOM is fully loaded
             setTimeout(() => {
                 const existingConv = document.querySelector(`.conversation-item[data-username="${userParam}"]`);
                 if (existingConv) {
                     existingConv.click();
                 } else {
-                    // Start a new conversation with this user
                     openChat(userParam, 'default.jpg', null);
                 }
             }, 500);
