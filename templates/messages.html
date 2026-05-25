@@ -72,6 +72,11 @@
         cursor: pointer; 
         font-size: 16px; 
         border: none;
+        transition: transform 0.2s, opacity 0.2s;
+    }
+    .new-message-btn:hover {
+        transform: scale(1.05);
+        opacity: 0.9;
     }
 
     .search-messages { padding: 12px 16px; }
@@ -99,7 +104,14 @@
     .conversation-item:hover, .conversation-item.active { background: white; }
     .conversation-item.unread { background: #eff6ff; }
 
-    .conv-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .conv-avatar { 
+        width: 50px; 
+        height: 50px; 
+        border-radius: 50%; 
+        object-fit: cover; 
+        flex-shrink: 0; 
+        background: var(--bg-secondary);
+    }
     .conv-info { flex: 1; min-width: 0; }
     .conv-name { 
         font-weight: 600; 
@@ -158,9 +170,28 @@
         color: var(--text-primary); 
     }
     @media (max-width: 768px) { .back-btn { display: block; } }
-    .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+    .chat-avatar { 
+        width: 40px; 
+        height: 40px; 
+        border-radius: 50%; 
+        object-fit: cover; 
+        background: var(--bg-secondary);
+    }
     .chat-username { font-weight: 600; font-size: 15px; color: var(--text-primary); }
-    .chat-status { font-size: 12px; color: #22c55e; }
+    .chat-status { 
+        font-size: 12px; 
+        color: #22c55e; 
+        display: flex; 
+        align-items: center; 
+        gap: 4px; 
+    }
+    .chat-status .online-dot {
+        width: 8px;
+        height: 8px;
+        background: #22c55e;
+        border-radius: 50%;
+        display: inline-block;
+    }
 
     .chat-messages {
         flex: 1; 
@@ -179,6 +210,12 @@
         font-size: 14px; 
         line-height: 1.4; 
         position: relative;
+        word-wrap: break-word;
+        animation: messageIn 0.3s ease;
+    }
+    @keyframes messageIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
     }
     .message-sent {
         align-self: flex-end; 
@@ -193,8 +230,22 @@
         border-bottom-left-radius: 4px; 
         border: 1px solid var(--border-color);
     }
-    .message-time { font-size: 10px; opacity: 0.7; margin-top: 4px; text-align: right; }
-    .message-image { max-width: 200px; border-radius: 12px; margin-bottom: 4px; }
+    .message-time { 
+        font-size: 10px; 
+        opacity: 0.7; 
+        margin-top: 4px; 
+        text-align: right; 
+    }
+    .message-image { 
+        max-width: 200px; 
+        border-radius: 12px; 
+        margin-bottom: 4px; 
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .message-image:hover {
+        transform: scale(1.05);
+    }
 
     .chat-input-area {
         padding: 12px 16px; 
@@ -230,6 +281,10 @@
         border: none; 
         cursor: pointer; 
         font-size: 16px;
+        transition: transform 0.2s, opacity 0.2s;
+    }
+    .chat-send-btn:hover:not(:disabled) {
+        transform: scale(1.05);
     }
     .chat-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     
@@ -241,6 +296,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: transform 0.2s;
+        border-radius: 50%;
+    }
+    .chat-attach-btn:hover {
+        transform: scale(1.1);
+        background: var(--bg-secondary);
     }
 
     .empty-chat {
@@ -263,6 +324,7 @@
         z-index: 9999;
         align-items: center;
         justify-content: center;
+        backdrop-filter: blur(2px);
     }
     .modal-overlay.active { display: flex; }
 
@@ -273,6 +335,11 @@
         max-width: 420px;
         width: 90%;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        animation: modalIn 0.3s ease;
+    }
+    @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .modal-card h3 {
@@ -317,6 +384,7 @@
         height: 40px;
         border-radius: 50%;
         object-fit: cover;
+        background: var(--bg-secondary);
     }
 
     .modal-username {
@@ -342,8 +410,55 @@
         font-weight: 600;
         cursor: pointer;
         font-size: 14px;
+        transition: background 0.2s;
     }
     .modal-cancel-btn:hover { background: var(--border-color); }
+
+    /* Toast notifications */
+    .toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #333;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 14px;
+        z-index: 99999;
+        animation: fadeInUp 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .toast.error { background: #ef4444; }
+    .toast.success { background: #22c55e; }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Scrollbar styling */
+    .chat-messages::-webkit-scrollbar,
+    .conversation-list::-webkit-scrollbar,
+    .modal-results::-webkit-scrollbar {
+        width: 6px;
+    }
+    .chat-messages::-webkit-scrollbar-track,
+    .conversation-list::-webkit-scrollbar-track,
+    .modal-results::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .chat-messages::-webkit-scrollbar-thumb,
+    .conversation-list::-webkit-scrollbar-thumb,
+    .modal-results::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 3px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb:hover,
+    .conversation-list::-webkit-scrollbar-thumb:hover,
+    .modal-results::-webkit-scrollbar-thumb:hover {
+        background: #ccc;
+    }
 </style>
 
 <div class="messages-container">
@@ -439,7 +554,8 @@
                class="modal-search-input" 
                id="newMessageSearch" 
                placeholder="Search for a user by username..."
-               oninput="searchUsers(this.value)">
+               oninput="searchUsers(this.value)"
+               autocomplete="off">
         <div class="modal-results" id="userSearchResults">
             <div class="modal-no-results">Type at least 2 characters to search</div>
         </div>
@@ -452,6 +568,23 @@
 <script>
     let activeConversation = null;
     let messagePollInterval;
+    const POLL_INTERVAL = 1000; // 1 second polling interval
+
+    // ============ TOAST NOTIFICATIONS ============
+    function showToast(message, type = 'info') {
+        // Remove existing toasts to prevent stacking
+        document.querySelectorAll('.toast').forEach(t => t.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 
     // ============ NEW MESSAGE MODAL ============
     function openNewMessageModal() {
@@ -475,8 +608,12 @@
         if (e.key === 'Escape') closeNewMessageModal();
     });
 
+    let searchTimeout;
     async function searchUsers(query) {
         const resultsDiv = document.getElementById('userSearchResults');
+        
+        // Clear previous timeout for debouncing
+        if (searchTimeout) clearTimeout(searchTimeout);
         
         if (query.length < 2) {
             resultsDiv.innerHTML = '<div class="modal-no-results">Type at least 2 characters to search</div>';
@@ -485,81 +622,147 @@
         
         resultsDiv.innerHTML = '<div class="modal-no-results"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
         
-        try {
-            const response = await fetch(`/api/search-users?q=${encodeURIComponent(query)}`);
-            const users = await response.json();
-            
-            if (users.length === 0) {
-                resultsDiv.innerHTML = '<div class="modal-no-results">No users found matching "' + escapeHtml(query) + '"</div>';
-                return;
+        // Debounce search requests by 300ms
+        searchTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/api/search-users?q=${encodeURIComponent(query)}`);
+                const users = await response.json();
+                
+                if (users.length === 0) {
+                    resultsDiv.innerHTML = '<div class="modal-no-results">No users found matching "' + escapeHtml(query) + '"</div>';
+                    return;
+                }
+                
+                resultsDiv.innerHTML = users.map(u => `
+                    <div class="modal-user-item" onclick="startConversation('${u.username}', '${u.profile_image}')">
+                        <img src="/static/uploads/${u.profile_image}" 
+                             class="modal-user-avatar" 
+                             alt="${u.username}"
+                             onerror="this.src='/static/uploads/default.jpg'">
+                        <span class="modal-username">@${escapeHtml(u.username)}</span>
+                    </div>
+                `).join('');
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="modal-no-results">Search failed. Please try again.</div>';
             }
-            
-            resultsDiv.innerHTML = users.map(u => `
-                <div class="modal-user-item" onclick="startConversation('${u.username}', '${u.profile_image}')">
-                    <img src="/static/uploads/${u.profile_image}" 
-                         class="modal-user-avatar" 
-                         alt="${u.username}"
-                         onerror="this.src='/static/uploads/default.jpg'">
-                    <span class="modal-username">@${u.username}</span>
-                </div>
-            `).join('');
-        } catch (error) {
-            resultsDiv.innerHTML = '<div class="modal-no-results">Search failed. Please try again.</div>';
-        }
+        }, 300);
     }
 
     function startConversation(username, profileImage) {
         closeNewMessageModal();
-        openChat(username, profileImage, null);
+        
+        // Check if conversation already exists in the list
+        const existingConv = document.querySelector(`.conversation-item[data-username="${username}"]`);
+        if (existingConv) {
+            existingConv.click();
+        } else {
+            openChat(username, profileImage, null);
+        }
     }
 
     // ============ CHAT FUNCTIONS ============
     function openChat(username, profileImage, element) {
         activeConversation = username;
-        document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
-        if (element) element.classList.add('active');
         
+        // Highlight active conversation in the list
+        document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+        if (element) {
+            element.classList.add('active');
+            // Remove unread status
+            element.classList.remove('unread');
+            const badge = element.querySelector('.unread-badge');
+            if (badge) badge.remove();
+        }
+        
+        // Update chat header
         document.getElementById('chatUsername').textContent = '@' + username;
-        document.getElementById('chatStatus').textContent = 'Active now';
+        document.getElementById('chatStatus').innerHTML = '<span class="online-dot"></span> Active now';
         document.getElementById('chatAvatar').src = '/static/uploads/' + profileImage;
         document.getElementById('chatAvatar').style.display = 'block';
+        document.getElementById('chatAvatar').onerror = function() {
+            this.src = '/static/uploads/default.jpg';
+        };
+        
+        // Show chat input area
         document.getElementById('chatInputArea').style.display = 'flex';
         
+        // Load all messages for this conversation
         loadMessages(username);
         
+        // On mobile, show the chat window full screen
         if (window.innerWidth <= 768) {
             document.getElementById('chatWindow').classList.add('active');
         }
         
+        // Start polling for new messages every 1 second
         clearInterval(messagePollInterval);
-        messagePollInterval = setInterval(() => loadMessages(username, true), 3000);
+        messagePollInterval = setInterval(() => {
+            if (activeConversation === username) {
+                loadMessagesPoll(username);
+            }
+        }, POLL_INTERVAL);
         
-        setTimeout(() => document.getElementById('chatInput').focus(), 300);
+        // Focus the message input
+        setTimeout(() => {
+            const input = document.getElementById('chatInput');
+            if (input) input.focus();
+        }, 300);
     }
 
     function closeChat() {
         activeConversation = null;
         clearInterval(messagePollInterval);
+        
         if (window.innerWidth <= 768) {
             document.getElementById('chatWindow').classList.remove('active');
         }
     }
 
-    async function loadMessages(username, silent = false) {
+    // Full message load (used for initial open and after sending)
+    async function loadMessages(username) {
         try {
             const response = await fetch(`/api/messages/${username}`);
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
             if (data.messages && data.messages.length > 0) {
-                if (!silent) container.innerHTML = '';
+                // Clear and rebuild the entire chat
+                container.innerHTML = '';
                 data.messages.forEach(msg => appendMessage(msg, false));
-                if (!silent) scrollToBottom();
-            } else if (!silent) {
+                scrollToBottom();
+            } else {
                 container.innerHTML = `<div class="empty-chat"><i class="fas fa-comment-dots"></i><p>Start the conversation!</p></div>`;
             }
         } catch (error) {
             console.error('Failed to load messages:', error);
+        }
+    }
+
+    // Lightweight poll that preserves scroll position
+    async function loadMessagesPoll(username) {
+        if (!activeConversation || activeConversation !== username) return;
+        
+        try {
+            const response = await fetch(`/api/messages/${username}`);
+            const data = await response.json();
+            const container = document.getElementById('chatMessages');
+            
+            if (data.messages && data.messages.length > 0) {
+                // Check if user was at the bottom before updating
+                const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                
+                // Rebuild messages
+                container.innerHTML = '';
+                data.messages.forEach(msg => appendMessage(msg, false));
+                
+                // Only auto-scroll if user was already at the bottom
+                // This allows reading old messages without being jerked down
+                if (wasAtBottom) {
+                    scrollToBottom();
+                }
+            }
+        } catch (error) {
+            // Silent fail for polling - don't bother the user
         }
     }
 
@@ -568,19 +771,23 @@
         const message = input.value.trim();
         if (!message || !activeConversation) return;
         
+        // Optimistic UI - show message immediately before server confirms
         appendMessage({ 
             content: message, 
             sender: '{{ current_user.username }}', 
             created_at: new Date().toISOString(), 
             is_sent: true 
         }, true);
+        
+        // Clear input
         input.value = '';
         document.getElementById('sendBtn').disabled = true;
+        input.style.height = 'auto';
         scrollToBottom();
         
         try {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-            await fetch('/api/messages/send', {
+            const response = await fetch('/api/messages/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -588,6 +795,15 @@
                 },
                 body: JSON.stringify({ recipient: activeConversation, message: message })
             });
+            
+            if (response.ok) {
+                // Reload messages to get server-confirmed version
+                await loadMessages(activeConversation);
+                // Refresh the page to update conversation list for both users
+                setTimeout(() => location.reload(), 500);
+            } else {
+                showToast('Failed to send message', 'error');
+            }
         } catch (error) {
             showToast('Failed to send message', 'error');
         }
@@ -597,19 +813,43 @@
         const container = document.getElementById('chatMessages');
         const isSent = msg.sender === '{{ current_user.username }}' || msg.is_sent;
         
+        // Remove empty chat placeholder if present
         if (container.querySelector('.empty-chat')) container.innerHTML = '';
         
+        // Create message bubble
         const bubble = document.createElement('div');
         bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
-        if (msg.image) bubble.innerHTML += `<img src="/static/uploads/${msg.image}" class="message-image">`;
-        bubble.innerHTML += `<div>${escapeHtml(msg.content)}</div><div class="message-time">${formatTime(msg.created_at)}</div>`;
+        
+        // Add image if present
+        if (msg.image) {
+            const img = document.createElement('img');
+            img.src = `/static/uploads/${msg.image}`;
+            img.className = 'message-image';
+            img.onclick = function() { window.open(this.src, '_blank'); };
+            img.onerror = function() { this.style.display = 'none'; };
+            bubble.appendChild(img);
+        }
+        
+        // Add message content
+        const contentDiv = document.createElement('div');
+        contentDiv.textContent = msg.content;
+        bubble.appendChild(contentDiv);
+        
+        // Add timestamp
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        timeDiv.textContent = formatTime(msg.created_at);
+        bubble.appendChild(timeDiv);
+        
         container.appendChild(bubble);
         if (scroll) scrollToBottom();
     }
 
     function scrollToBottom() {
         const container = document.getElementById('chatMessages');
-        setTimeout(() => { container.scrollTop = container.scrollHeight; }, 100);
+        requestAnimationFrame(() => {
+            container.scrollTop = container.scrollHeight;
+        });
     }
 
     function autoResize(textarea) {
@@ -620,30 +860,61 @@
     }
 
     function formatTime(timestamp) {
+        if (!timestamp) return '';
         const date = new Date(timestamp);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return diffMins + 'm ago';
+        
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffDays = Math.floor((today - msgDate) / 86400000);
+        
+        if (diffDays === 0) {
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (diffDays === 1) {
+            return 'Yesterday';
+        } else if (diffDays < 7) {
+            return diffDays + 'd ago';
+        } else {
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
     }
 
     function escapeHtml(str) {
+        if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
     }
 
     function filterConversations(query) {
+        const searchTerm = query.toLowerCase().trim();
         document.querySelectorAll('.conversation-item').forEach(item => {
             const username = item.getAttribute('data-username')?.toLowerCase() || '';
-            item.style.display = username.includes(query.toLowerCase()) ? 'flex' : 'none';
+            item.style.display = username.includes(searchTerm) ? 'flex' : 'none';
         });
     }
 
     function attachMedia() {
+        if (!activeConversation) {
+            showToast('Please select a conversation first', 'error');
+            return;
+        }
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
         input.onchange = (e) => {
             const file = e.target.files[0];
-            if (file && activeConversation) {
+            if (file) {
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    showToast('Image must be less than 10MB', 'error');
+                    return;
+                }
                 uploadAndSendImage(file);
             }
         };
@@ -651,6 +922,8 @@
     }
 
     async function uploadAndSendImage(file) {
+        showToast('Uploading image...', 'info');
+        
         const formData = new FormData();
         formData.append('image', file);
         formData.append('recipient', activeConversation);
@@ -664,32 +937,71 @@
                 },
                 body: formData
             });
+            
             if (response.ok) {
                 const data = await response.json();
                 appendMessage(data, true);
+                showToast('Image sent successfully', 'success');
+                // Reload messages and refresh conversation list
+                await loadMessages(activeConversation);
+                setTimeout(() => location.reload(), 500);
+            } else {
+                const errorData = await response.json().catch(() => ({}));
+                showToast(errorData.error || 'Failed to send image', 'error');
             }
         } catch (error) {
             showToast('Failed to send image', 'error');
         }
     }
 
+    // Input event listener for send button state
     document.getElementById('chatInput').addEventListener('input', function() {
         document.getElementById('sendBtn').disabled = !this.value.trim();
     });
-    // ============ AUTO-OPEN CONVERSATION FROM URL ============
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const userParam = urlParams.get('user');
-    if (userParam) {
-        // Find the conversation in the list or start a new one
-        const existingConv = document.querySelector(`.conversation-item[data-username="${userParam}"]`);
-        if (existingConv) {
-            existingConv.click();
-        } else {
-            // Start a new conversation with this user
-            openChat(userParam, 'default.jpg', null);
+
+    // Handle paste event for images (Ctrl+V)
+    document.getElementById('chatInput').addEventListener('paste', function(e) {
+        const items = e.clipboardData.items;
+        for (let item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const file = item.getAsFile();
+                if (file && activeConversation) {
+                    uploadAndSendImage(file);
+                }
+                break;
+            }
         }
-    }
-});
+    });
+
+    // Handle window resize for responsive behavior
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768 && activeConversation) {
+            document.getElementById('chatWindow').classList.remove('active');
+        }
+    });
+
+    // ============ AUTO-OPEN CONVERSATION FROM URL ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user');
+        if (userParam) {
+            // Small delay to ensure DOM is fully loaded
+            setTimeout(() => {
+                const existingConv = document.querySelector(`.conversation-item[data-username="${userParam}"]`);
+                if (existingConv) {
+                    existingConv.click();
+                } else {
+                    // Start a new conversation with this user
+                    openChat(userParam, 'default.jpg', null);
+                }
+            }, 500);
+        }
+    });
+
+    // Cleanup polling when leaving the page
+    window.addEventListener('beforeunload', function() {
+        clearInterval(messagePollInterval);
+    });
 </script>
 {% endblock %}
