@@ -35,8 +35,8 @@
             <!-- Media: Video or Image -->
             {% if post.video %}
             <video 
-                src="{{ url_for('static', filename='uploads/' + post.video) }}"
-                poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
+                src="{% if post.video.startswith('http') %}{{ post.video }}{% else %}{{ url_for('static', filename='uploads/' + post.video) }}{% endif %}"
+                poster="{% if post.thumbnail and post.thumbnail.startswith('http') %}{{ post.thumbnail }}{% elif post.thumbnail %}{{ url_for('static', filename='uploads/' + post.thumbnail) }}{% endif %}"
                 loop
                 muted
                 playsinline
@@ -45,7 +45,7 @@
                 data-video-id="{{ post.id }}"
             ></video>
             {% elif post.image %}
-           <img src="{{ post.image if post.image.startswith('http') else url_for('static', filename='uploads/' + post.image) }}">
+            <img src="{% if post.image.startswith('http') %}{{ post.image }}{% else %}{{ url_for('static', filename='uploads/' + post.image) }}{% endif %}" 
                  alt="{{ post.title }}" 
                  class="post-media"
                  loading="lazy">
@@ -61,7 +61,7 @@
                 <div class="post-info">
                     <div class="post-author">
                         <a href="{{ url_for('user_profile', username=post.author.username) }}">
-                            <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" 
+                            <img src="{% if post.author.profile_image.startswith('http') %}{{ post.author.profile_image }}{% else %}{{ url_for('static', filename='uploads/' + post.author.profile_image) }}{% endif %}" 
                                  alt="{{ post.author.username }}"
                                  onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
                         </a>
@@ -139,7 +139,7 @@
         {% for suggested in suggested_users %}
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
             <a href="{{ url_for('user_profile', username=suggested.username) }}">
-                <img src="{{ url_for('static', filename='uploads/' + suggested.profile_image) }}" 
+                <img src="{% if suggested.profile_image.startswith('http') %}{{ suggested.profile_image }}{% else %}{{ url_for('static', filename='uploads/' + suggested.profile_image) }}{% endif %}" 
                      alt="{{ suggested.username }}"
                      style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;"
                      onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
