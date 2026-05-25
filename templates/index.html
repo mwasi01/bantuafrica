@@ -45,7 +45,7 @@
                 data-video-id="{{ post.id }}"
             ></video>
             {% elif post.image %}
-            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
+           <img src="{{ post.image if post.image.startswith('http') else url_for('static', filename='uploads/' + post.image) }}">
                  alt="{{ post.title }}" 
                  class="post-media"
                  loading="lazy">
