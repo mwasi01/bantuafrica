@@ -581,7 +581,9 @@
 
 <script>
     let activeConversation = null;
+    let messagePollInterval;
     let currentUser = '{{ current_user.username }}';
+    const POLL_INTERVAL = 3000; // 3 seconds - safe for paid tier
 
     // ============ TOAST NOTIFICATIONS ============
     function showToast(message, type = 'info') {
@@ -696,6 +698,14 @@
             document.getElementById('chatWindow').classList.add('active');
         }
         
+        // Start polling for new messages every 3 seconds
+        clearInterval(messagePollInterval);
+        messagePollInterval = setInterval(() => {
+            if (activeConversation === username) {
+                loadMessagesPoll(username);
+            }
+        }, POLL_INTERVAL);
+        
         setTimeout(() => {
             const input = document.getElementById('chatInput');
             if (input) input.focus();
@@ -704,6 +714,7 @@
 
     function closeChat() {
         activeConversation = null;
+        clearInterval(messagePollInterval);
         
         const container = document.getElementById('chatMessages');
         container.innerHTML = `
@@ -752,7 +763,6 @@
             const data = await response.json();
             const container = document.getElementById('chatMessages');
             
-            // Check if user was at bottom
             const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
             
             container.innerHTML = '';
@@ -786,6 +796,32 @@
         }
     }
 
+    // Polling function for real-time updates
+    async function loadMessagesPoll(username) {
+        if (!activeConversation || activeConversation !== username) return;
+        
+        try {
+            const response = await fetch(`/api/messages/${username}`);
+            if (!response.ok) return;
+            
+            const data = await response.json();
+            const container = document.getElementById('chatMessages');
+            
+            if (data.messages && data.messages.length > 0) {
+                const wasAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+                
+                container.innerHTML = '';
+                data.messages.forEach(msg => {
+                    appendMessageToContainer(container, msg);
+                });
+                
+                if (wasAtBottom) scrollToBottom();
+            }
+        } catch (error) {
+            // Silent fail for polling
+        }
+    }
+
     async function sendMessage() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
@@ -795,7 +831,6 @@
         document.getElementById('sendBtn').disabled = true;
         input.style.height = 'auto';
         
-        // Show optimistic message immediately
         const container = document.getElementById('chatMessages');
         const placeholder = container.querySelector('.empty-chat');
         if (placeholder) placeholder.remove();
@@ -818,7 +853,6 @@
             });
             
             if (response.ok) {
-                // Reload messages to get proper data
                 await loadMessages(activeConversation);
                 updateConversationPreview(activeConversation, message);
             } else {
@@ -994,6 +1028,10 @@
         if (window.innerWidth > 768 && activeConversation) {
             document.getElementById('chatWindow').classList.remove('active');
         }
+    });
+
+    window.addEventListener('beforeunload', function() {
+        clearInterval(messagePollInterval);
     });
 
     document.addEventListener('DOMContentLoaded', function() {
