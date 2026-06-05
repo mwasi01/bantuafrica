@@ -405,6 +405,23 @@
         font-size: 14px;
     }
 
+    /* Loading spinner for saved tab */
+    .loading-spinner {
+        text-align: center;
+        padding: 40px 20px;
+        grid-column: span 3;
+    }
+
+    .loading-spinner i {
+        font-size: 24px;
+        color: var(--text-secondary);
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
     @media (max-width: 480px) {
         .profile-stats {
             gap: 20px;
@@ -528,7 +545,7 @@
             <i class="fas fa-tag"></i> Tagged
         </button>
         {% if user == current_user %}
-        <button class="profile-tab" data-tab="saved" onclick="switchProfileTab('saved', this)">
+        <button class="profile-tab" data-tab="saved" onclick="switchProfileTab('saved', this); loadSavedPosts();">
             <i class="fas fa-bookmark"></i> Saved
         </button>
         {% endif %}
@@ -640,10 +657,11 @@
     <!-- Saved Tab -->
     {% if user == current_user %}
     <div class="tab-content" id="tab-saved" style="display: none;">
-        <div class="empty-state">
-            <i class="fas fa-bookmark"></i>
-            <h3>No Saved Posts</h3>
-            <p>Saved posts will appear here</p>
+        <div class="posts-grid" id="savedPostsGrid">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p style="color: var(--text-secondary); margin-top: 8px;">Loading saved posts...</p>
+            </div>
         </div>
     </div>
     {% endif %}
@@ -681,105 +699,179 @@
 
 {% block scripts %}
 <script>
-// ============ PROFILE TAB SWITCHING ============
-function switchProfileTab(tabName, button) {
-    document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-    button.classList.add('active');
-    
-    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-    const target = document.getElementById('tab-' + tabName);
-    if (target) target.style.display = 'block';
-}
-
-// ============ FOLLOW TOGGLE ============
-async function toggleFollowProfile(username, button) {
-    const isFollowing = button.classList.contains('following');
-    
-    if (isFollowing) {
-        button.classList.remove('following');
-        button.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
-        button.style.background = 'var(--accent)';
-        button.style.color = 'white';
-        button.style.border = 'none';
-        updateFollowerCount(-1);
-    } else {
-        button.classList.add('following');
-        button.innerHTML = '<i class="fas fa-user-check"></i> Following';
-        button.style.background = 'var(--bg-card)';
-        button.style.color = 'var(--text-primary)';
-        button.style.border = '1px solid var(--border-color)';
-        updateFollowerCount(1);
+    // ============ PROFILE TAB SWITCHING ============
+    function switchProfileTab(tabName, button) {
+        document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+        button.classList.add('active');
+        
+        document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+        const target = document.getElementById('tab-' + tabName);
+        if (target) target.style.display = 'block';
     }
-    
-    try {
-        const endpoint = isFollowing ? `/unfollow/${username}` : `/follow/${username}`;
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        const response = await fetch(endpoint, {
-            headers: { 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' }
-        });
+
+    // ============ FOLLOW TOGGLE ============
+    async function toggleFollowProfile(username, button) {
+        const isFollowing = button.classList.contains('following');
         
-        if (!response.ok) throw new Error('Failed');
-        
-    } catch (error) {
         if (isFollowing) {
-            button.classList.add('following');
-            button.innerHTML = '<i class="fas fa-user-check"></i> Following';
-            button.style.background = 'var(--bg-card)';
-            button.style.color = 'var(--text-primary)';
-            button.style.border = '1px solid var(--border-color)';
-            updateFollowerCount(1);
-        } else {
             button.classList.remove('following');
             button.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
             button.style.background = 'var(--accent)';
             button.style.color = 'white';
             button.style.border = 'none';
             updateFollowerCount(-1);
+        } else {
+            button.classList.add('following');
+            button.innerHTML = '<i class="fas fa-user-check"></i> Following';
+            button.style.background = 'var(--bg-card)';
+            button.style.color = 'var(--text-primary)';
+            button.style.border = '1px solid var(--border-color)';
+            updateFollowerCount(1);
         }
-        showToast('Action failed', 'error');
+        
+        try {
+            const endpoint = isFollowing ? `/unfollow/${username}` : `/follow/${username}`;
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch(endpoint, {
+                headers: { 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' }
+            });
+            
+            if (!response.ok) throw new Error('Failed');
+            
+        } catch (error) {
+            if (isFollowing) {
+                button.classList.add('following');
+                button.innerHTML = '<i class="fas fa-user-check"></i> Following';
+                button.style.background = 'var(--bg-card)';
+                button.style.color = 'var(--text-primary)';
+                button.style.border = '1px solid var(--border-color)';
+                updateFollowerCount(1);
+            } else {
+                button.classList.remove('following');
+                button.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
+                button.style.background = 'var(--accent)';
+                button.style.color = 'white';
+                button.style.border = 'none';
+                updateFollowerCount(-1);
+            }
+            showToast('Action failed', 'error');
+        }
     }
-}
 
-function updateFollowerCount(delta) {
-    const countEl = document.getElementById('followersCount');
-    if (countEl) {
-        countEl.textContent = Math.max(0, parseInt(countEl.textContent) + delta);
+    function updateFollowerCount(delta) {
+        const countEl = document.getElementById('followersCount');
+        if (countEl) {
+            countEl.textContent = Math.max(0, parseInt(countEl.textContent) + delta);
+        }
     }
-}
 
-// ============ NAVIGATION ============
-function openUserStories(username) {
-    window.location.href = `/stories/${username}`;
-}
-
-function openPostViewer(postId) {
-    window.location.href = `/post/${postId}`;
-}
-
-function openReelsViewer(videoUrl) {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;';
-    overlay.innerHTML = `
-        <video src="${videoUrl}" autoplay controls style="max-width:100%;max-height:100vh;"></video>
-        <button onclick="this.parentElement.remove()" style="position:absolute;top:20px;right:20px;color:white;font-size:24px;z-index:10;background:none;border:none;cursor:pointer;">✕</button>
-    `;
-    document.body.appendChild(overlay);
-}
-
-function openFollowersList() {
-    window.location.href = `/profile/{{ user.username }}/followers`;
-}
-
-function openFollowingList() {
-    window.location.href = `/profile/{{ user.username }}/following`;
-}
-
-// ============ INITIALIZATION ============
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.hash === '#reels') {
-        const reelsTab = document.querySelector('[data-tab="reels"]');
-        if (reelsTab) switchProfileTab('reels', reelsTab);
+    // ============ LOAD SAVED POSTS ============
+    async function loadSavedPosts() {
+        const grid = document.getElementById('savedPostsGrid');
+        if (!grid) return;
+        
+        // Only load once
+        if (grid.getAttribute('data-loaded') === 'true') return;
+        grid.setAttribute('data-loaded', 'true');
+        
+        grid.innerHTML = `
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p style="color: var(--text-secondary); margin-top: 8px;">Loading saved posts...</p>
+            </div>`;
+        
+        try {
+            const response = await fetch('/api/saved-posts');
+            const data = await response.json();
+            
+            if (data.posts && data.posts.length > 0) {
+                grid.innerHTML = data.posts.map(post => {
+                    let mediaHTML = '';
+                    if (post.video) {
+                        const videoSrc = post.video.startsWith('http') ? post.video : `/static/uploads/${post.video}`;
+                        const posterSrc = post.thumbnail && post.thumbnail.startsWith('http') ? post.thumbnail : (post.thumbnail ? `/static/uploads/${post.thumbnail}` : '');
+                        mediaHTML = `<video src="${videoSrc}" muted preload="metadata" poster="${posterSrc}" style="width:100%;height:100%;object-fit:cover;"></video><div class="video-icon"><i class="fas fa-play"></i></div>`;
+                    } else if (post.image) {
+                        const imgSrc = post.image.startsWith('http') ? post.image : `/static/uploads/${post.image}`;
+                        mediaHTML = `<img src="${imgSrc}" alt="${post.title}" loading="lazy">`;
+                    } else {
+                        mediaHTML = `<div class="text-post"><span>${escapeHtml(post.content.substring(0, 60))}...</span></div>`;
+                    }
+                    
+                    return `
+                        <div class="grid-item" onclick="window.location.href='/post/${post.id}'">
+                            ${mediaHTML}
+                            <div class="grid-overlay">
+                                <span><i class="fas fa-heart"></i> ${post.like_count}</span>
+                                <span><i class="fas fa-comment"></i> ${post.comment_count}</span>
+                            </div>
+                        </div>`;
+                }).join('');
+            } else {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: span 3;">
+                        <i class="fas fa-bookmark"></i>
+                        <h3>No Saved Posts</h3>
+                        <p>Posts you save will appear here</p>
+                    </div>`;
+            }
+        } catch (e) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: span 3;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Could not load saved posts</h3>
+                    <p>Please try again later</p>
+                </div>`;
+        }
     }
-});
+
+    // ============ NAVIGATION ============
+    function openUserStories(username) {
+        window.location.href = `/stories/${username}`;
+    }
+
+    function openPostViewer(postId) {
+        window.location.href = `/post/${postId}`;
+    }
+
+    function openReelsViewer(videoUrl) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <video src="${videoUrl}" autoplay controls style="max-width:100%;max-height:100vh;"></video>
+            <button onclick="this.parentElement.remove()" style="position:absolute;top:20px;right:20px;color:white;font-size:24px;z-index:10;background:none;border:none;cursor:pointer;">✕</button>
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    function openFollowersList() {
+        window.location.href = `/profile/{{ user.username }}/followers`;
+    }
+
+    function openFollowingList() {
+        window.location.href = `/profile/{{ user.username }}/following`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ============ INITIALIZATION ============
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.hash === '#reels') {
+            const reelsTab = document.querySelector('[data-tab="reels"]');
+            if (reelsTab) switchProfileTab('reels', reelsTab);
+        }
+        if (window.location.hash === '#saved') {
+            const savedTab = document.querySelector('[data-tab="saved"]');
+            if (savedTab) {
+                switchProfileTab('saved', savedTab);
+                loadSavedPosts();
+            }
+        }
+    });
 </script>
 {% endblock %}
