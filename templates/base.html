@@ -56,17 +56,17 @@
         }
         
         .flash-message.danger {
-            background: rgba(255, 45, 85, 0.95);
+            background: rgba(239, 68, 68, 0.95);
             color: white;
         }
         
         .flash-message.info {
-            background: rgba(0, 122, 255, 0.95);
+            background: rgba(59, 130, 246, 0.95);
             color: white;
         }
         
         .flash-message.warning {
-            background: rgba(255, 149, 0, 0.95);
+            background: rgba(245, 158, 11, 0.95);
             color: white;
         }
         
@@ -95,13 +95,102 @@
             from { opacity: 1; }
             to { opacity: 0; visibility: hidden; }
         }
+
+        /* ============ INCOMING CALL MODAL ============ */
+        .incoming-call-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .incoming-call-modal.active {
+            display: flex;
+        }
+
+        .incoming-call-modal .caller-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            margin-bottom: 16px;
+        }
+
+        .incoming-call-modal .caller-name {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .incoming-call-modal .call-type-text {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 32px;
+        }
+
+        .incoming-call-modal .call-actions {
+            display: flex;
+            gap: 30px;
+        }
+
+        .incoming-call-modal .call-action-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .incoming-call-modal .call-action-btn.accept {
+            background: #22c55e;
+            color: white;
+        }
+
+        .incoming-call-modal .call-action-btn.accept:hover {
+            background: #16a34a;
+        }
+
+        .incoming-call-modal .call-action-btn.reject {
+            background: #ef4444;
+            color: white;
+        }
+
+        .incoming-call-modal .call-action-btn.reject:hover {
+            background: #dc2626;
+        }
+
+        .incoming-call-modal .action-label {
+            color: white;
+            font-size: 12px;
+            margin-top: 8px;
+            font-weight: 600;
+        }
+
+        .incoming-call-modal .ringing-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 13px;
+            margin-top: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
     </style>
-    <style>
-    /* TEMPORARY TEST - Remove black background to see actual images */
-    .feed-container, .post-card {
-        background: #333 !important;
-    }
-</style>
 </head>
 <body>
     <!-- Desktop Top Navigation -->
@@ -130,6 +219,9 @@
                 </a>
                 <a href="{{ url_for('messages') }}" class="nav-link" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
                     <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('calls_history_page') }}" class="nav-link" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
+                    <i class="fas fa-phone-alt"></i> Calls
                 </a>
             </div>
         </div>
@@ -165,10 +257,17 @@
             </a>
             
             <a href="{{ url_for('profile') }}" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+                {% if current_user.profile_image and current_user.profile_image.startswith('http') %}
+                <img src="{{ current_user.profile_image }}" 
+                     alt="{{ current_user.username }}"
+                     style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
+                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% else %}
                 <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
                      alt="{{ current_user.username }}"
                      style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;"
                      onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% endif %}
                 <span style="color: var(--text-primary); font-size: 14px; font-weight: 500;">{{ current_user.username }}</span>
             </a>
             
@@ -229,6 +328,124 @@
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Incoming Call Modal (shown on all pages via SocketIO) -->
+    <div class="incoming-call-modal" id="incomingCallModal">
+        <img src="" alt="" class="caller-avatar" id="incomingCallerAvatar" onerror="this.src='/static/uploads/default.jpg'">
+        <div class="caller-name" id="incomingCallerName"></div>
+        <div class="call-type-text" id="incomingCallTypeText"></div>
+        <div class="call-actions">
+            <div style="text-align: center;">
+                <button class="call-action-btn reject" onclick="declineIncomingCall()">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <div class="action-label">Decline</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="call-action-btn accept" onclick="acceptIncomingCall()">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <div class="action-label">Accept</div>
+            </div>
+        </div>
+        <div class="ringing-text">Incoming call...</div>
+    </div>
+    
+    <!-- SocketIO for real-time call notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        {% if current_user.is_authenticated %}
+        // ============ SOCKETIO CONNECTION ============
+        const socket = io();
+        let incomingCallData = null;
+
+        socket.on('connect', () => {
+            console.log('✅ Connected to Bantu Africa server');
+        });
+
+        // ============ INCOMING CALL HANDLER ============
+        socket.on('incoming_call', (data) => {
+            console.log('📞 Incoming call from:', data.caller);
+            incomingCallData = data;
+            
+            // Show the incoming call modal
+            document.getElementById('incomingCallerName').textContent = '@' + data.caller;
+            document.getElementById('incomingCallTypeText').textContent = 
+                data.call_type === 'video' ? '📹 Video Call' : '📞 Voice Call';
+            
+            // Set caller avatar
+            const avatar = document.getElementById('incomingCallerAvatar');
+            if (data.caller_image && data.caller_image.startsWith('http')) {
+                avatar.src = data.caller_image;
+            } else {
+                avatar.src = '/static/uploads/' + (data.caller_image || 'default.jpg');
+            }
+            
+            document.getElementById('incomingCallModal').classList.add('active');
+            
+            // Auto-decline after 45 seconds if no response
+            setTimeout(() => {
+                if (document.getElementById('incomingCallModal').classList.contains('active')) {
+                    declineIncomingCall();
+                }
+            }, 45000);
+        });
+
+        function acceptIncomingCall() {
+            document.getElementById('incomingCallModal').classList.remove('active');
+            if (incomingCallData) {
+                socket.emit('call_accepted', {
+                    caller: incomingCallData.caller,
+                    room_id: incomingCallData.room_id
+                });
+                
+                // Update call status
+                fetch(`/api/call/${incomingCallData.call_id}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({ status: 'active' })
+                });
+                
+                // Redirect to call page
+                window.location.href = `/call/${incomingCallData.call_id}?room=${incomingCallData.room_id}&type=${incomingCallData.call_type}`;
+            }
+        }
+
+        function declineIncomingCall() {
+            document.getElementById('incomingCallModal').classList.remove('active');
+            if (incomingCallData) {
+                socket.emit('call_rejected', {
+                    caller: incomingCallData.caller
+                });
+                
+                // Update call status
+                fetch(`/api/call/${incomingCallData.call_id}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({ status: 'missed' })
+                });
+            }
+            incomingCallData = null;
+        }
+
+        // Listen for call ended by remote party while on another page
+        socket.on('call_ended', () => {
+            document.getElementById('incomingCallModal').classList.remove('active');
+            incomingCallData = null;
+            showToast('Call ended', 'info');
+        });
+
+        socket.on('call_rejected', () => {
+            showToast('Call declined', 'info');
+        });
+        {% endif %}
+    </script>
     
     <!-- Scripts -->
     <script>
@@ -248,7 +465,6 @@
         async function toggleFollow(username, button) {
             const isFollowing = button.classList.contains('following') || button.textContent.trim() === 'Following';
             
-            // Optimistic update
             if (isFollowing) {
                 button.classList.remove('following');
                 button.textContent = 'Follow';
@@ -276,7 +492,6 @@
                 if (!response.ok) throw new Error('Failed');
                 
             } catch (error) {
-                // Revert
                 if (isFollowing) {
                     button.classList.add('following');
                     button.textContent = 'Following';
@@ -294,6 +509,7 @@
             if (!container) {
                 container = document.createElement('div');
                 container.className = 'toast-container';
+                container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
                 document.body.appendChild(container);
             }
             
@@ -304,9 +520,9 @@
             };
             
             const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
+            toast.style.cssText = 'background:white;color:var(--text-primary);padding:12px 20px;border-radius:10px;font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,0.15);animation:slideIn 0.3s ease;border-left:3px solid var(--accent);';
             toast.innerHTML = `
-                <i class="fas ${icons[type] || icons.info}" style="font-size: 18px;"></i>
+                <i class="fas ${icons[type] || icons.info}" style="font-size:18px;margin-right:8px;"></i>
                 <span>${message}</span>
             `;
             container.appendChild(toast);
@@ -337,11 +553,13 @@
                     });
                 }
             } catch (e) {
-                // Silently fail - notifications are non-critical
+                // Silently fail
             }
         }
         
-      
+        // Check every 15 seconds for faster call notifications
+        setInterval(checkUnreadNotifications, 15000);
+        document.addEventListener('DOMContentLoaded', checkUnreadNotifications);
         {% endif %}
     </script>
     
