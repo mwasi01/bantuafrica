@@ -12,9 +12,56 @@
         padding-bottom: 80px;
     }
 
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
     /* Profile Header */
     .profile-header {
-        padding: 24px 16px 20px;
+        padding: 20px 16px 16px;
         text-align: center;
         background: var(--bg-secondary);
         border-bottom: 1px solid var(--border-color);
@@ -23,19 +70,19 @@
     .profile-avatar-wrapper {
         position: relative;
         display: inline-block;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     .profile-avatar {
-        width: 96px;
-        height: 96px;
+        width: 72px;
+        height: 72px;
         border-radius: 50%;
         object-fit: cover;
-        border: 3px solid var(--border-color);
+        border: 2px solid var(--border-color);
     }
 
     .profile-avatar.has-story {
-        border: 3px solid transparent;
+        border: 2px solid transparent;
         background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888) border-box;
         -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
         mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
@@ -51,45 +98,45 @@
         transform: translateX(-50%);
         background: var(--accent);
         color: white;
-        font-size: 9px;
-        padding: 2px 8px;
-        border-radius: 10px;
+        font-size: 8px;
+        padding: 1px 6px;
+        border-radius: 8px;
         white-space: nowrap;
         font-weight: 600;
     }
 
     .profile-username {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 800;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
 
     .profile-fullname {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--text-secondary);
-        margin-bottom: 8px;
+        margin-bottom: 4px;
     }
 
     .profile-bio {
-        font-size: 14px;
+        font-size: 13px;
         color: var(--text-secondary);
         max-width: 350px;
-        margin: 0 auto 4px;
-        line-height: 1.5;
+        margin: 0 auto 2px;
+        line-height: 1.4;
     }
 
     .profile-location {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
-        margin-top: 4px;
+        margin-top: 2px;
     }
 
     .profile-location i {
-        margin-right: 4px;
+        margin-right: 3px;
     }
 
     .profile-website {
-        font-size: 13px;
+        font-size: 12px;
         color: var(--accent);
         margin-top: 2px;
         display: inline-block;
@@ -102,9 +149,9 @@
     }
 
     .profile-joined {
-        font-size: 11px;
+        font-size: 10px;
         color: var(--text-secondary);
-        margin-top: 4px;
+        margin-top: 2px;
         opacity: 0.7;
     }
 
@@ -112,8 +159,8 @@
     .profile-stats {
         display: flex;
         justify-content: center;
-        gap: 32px;
-        margin: 20px 0;
+        gap: 28px;
+        margin: 14px 0;
     }
 
     .stat-item {
@@ -127,28 +174,28 @@
     }
 
     .stat-number {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
         display: block;
     }
 
     .stat-label {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--text-secondary);
     }
 
     /* Action Buttons */
     .profile-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
         justify-content: center;
         flex-wrap: wrap;
     }
 
     .btn-follow {
-        padding: 10px 28px;
-        border-radius: 10px;
-        font-size: 14px;
+        padding: 8px 22px;
+        border-radius: 8px;
+        font-size: 13px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;
@@ -174,9 +221,9 @@
     }
 
     .btn-message {
-        padding: 10px 20px;
-        border-radius: 10px;
-        font-size: 14px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
@@ -186,7 +233,7 @@
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 5px;
     }
 
     .btn-message:hover {
@@ -194,10 +241,10 @@
     }
 
     .btn-share {
-        width: 42px;
-        height: 42px;
-        border-radius: 10px;
-        font-size: 16px;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        font-size: 14px;
         cursor: pointer;
         transition: all 0.2s;
         background: var(--bg-card);
@@ -226,8 +273,8 @@
     .profile-tab {
         flex: 1;
         text-align: center;
-        padding: 14px 0;
-        font-size: 13px;
+        padding: 12px 0;
+        font-size: 12px;
         font-weight: 600;
         color: var(--text-secondary);
         cursor: pointer;
@@ -240,7 +287,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 5px;
     }
 
     .profile-tab:hover {
@@ -253,7 +300,7 @@
     }
 
     .profile-tab i {
-        font-size: 15px;
+        font-size: 14px;
     }
 
     /* Posts Grid */
@@ -364,16 +411,20 @@
     /* Responsive */
     @media (max-width: 480px) {
         .profile-stats {
-            gap: 20px;
+            gap: 18px;
         }
         
         .profile-actions {
-            gap: 6px;
+            gap: 5px;
         }
         
         .btn-follow {
-            padding: 10px 20px;
-            font-size: 13px;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+        
+        .profile-container {
+            padding-bottom: 90px;
         }
     }
 </style>
@@ -382,6 +433,16 @@
     <!-- Profile Header -->
     <div class="profile-header">
         <div class="profile-avatar-wrapper">
+            {% if user.profile_image and user.profile_image.startswith('http') %}
+            <img src="{{ user.profile_image }}" 
+                 alt="{{ user.username }}"
+                 class="profile-avatar {% if stories_count and stories_count > 0 %}has-story{% endif %}"
+                 id="profileAvatar"
+                 onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'"
+                 {% if stories_count and stories_count > 0 %}
+                 onclick="window.location.href='{{ url_for('view_stories', username=user.username) }}'"
+                 {% endif %}>
+            {% else %}
             <img src="{{ url_for('static', filename='uploads/' + user.profile_image) }}" 
                  alt="{{ user.username }}"
                  class="profile-avatar {% if stories_count and stories_count > 0 %}has-story{% endif %}"
@@ -390,6 +451,7 @@
                  {% if stories_count and stories_count > 0 %}
                  onclick="window.location.href='{{ url_for('view_stories', username=user.username) }}'"
                  {% endif %}>
+            {% endif %}
             {% if stories_count and stories_count > 0 %}
             <div class="story-indicator">
                 <i class="fas fa-play-circle"></i> {{ stories_count }} stories
@@ -486,16 +548,22 @@
             {% for post in posts %}
             <div class="grid-item" onclick="window.location.href='{{ url_for('view_post', post_id=post.id) }}'">
                 {% if post.video %}
-                <video src="{{ url_for('static', filename='uploads/' + post.video) }}" 
-                       muted preload="metadata"
-                       poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"></video>
+                    {% if post.video.startswith('http') %}
+                    <video src="{{ post.video }}" muted preload="metadata"
+                           poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"></video>
+                    {% else %}
+                    <video src="{{ url_for('static', filename='uploads/' + post.video) }}" muted preload="metadata"
+                           poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"></video>
+                    {% endif %}
                 <div class="video-icon">
                     <i class="fas fa-play"></i>
                 </div>
                 {% elif post.image %}
-                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
-                     alt="{{ post.title }}"
-                     loading="lazy">
+                    {% if post.image.startswith('http') %}
+                    <img src="{{ post.image }}" alt="{{ post.title }}" loading="lazy">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="{{ post.title }}" loading="lazy">
+                    {% endif %}
                 {% else %}
                 <div class="text-post">
                     <span>{{ post.content[:60] }}{% if post.content|length > 60 %}...{% endif %}</span>
@@ -530,10 +598,14 @@
         {% if reels %}
         <div class="posts-grid">
             {% for reel in reels %}
-            <div class="grid-item" onclick="openReel('{{ url_for('static', filename='uploads/' + reel.video) }}')">
-                <video src="{{ url_for('static', filename='uploads/' + reel.video) }}" 
-                       muted preload="metadata"
+            <div class="grid-item" onclick="openReel('{% if reel.video.startswith('http') %}{{ reel.video }}{% else %}{{ url_for('static', filename='uploads/' + reel.video) }}{% endif %}')">
+                {% if reel.video.startswith('http') %}
+                <video src="{{ reel.video }}" muted preload="metadata"
+                       poster="{{ reel.thumbnail if reel.thumbnail and reel.thumbnail.startswith('http') else '' }}"></video>
+                {% else %}
+                <video src="{{ url_for('static', filename='uploads/' + reel.video) }}" muted preload="metadata"
                        poster="{{ url_for('static', filename='uploads/' + reel.thumbnail) if reel.thumbnail else '' }}"></video>
+                {% endif %}
                 <div class="video-icon">
                     <i class="fas fa-play"></i>
                 </div>
@@ -569,6 +641,29 @@
     </div>
 </div>
 
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item active">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 <!-- Reel Viewer Modal -->
 <div id="reelModal" style="display: none; position: fixed; inset: 0; background: #000; z-index: 9999; align-items: center; justify-content: center;">
     <button onclick="closeReel()" style="position: absolute; top: 16px; right: 16px; color: white; font-size: 24px; background: none; border: none; z-index: 10; cursor: pointer;">
@@ -597,7 +692,6 @@
     async function toggleFollowProfile(username, button) {
         const isFollowing = button.classList.contains('following');
         
-        // Optimistic update
         if (isFollowing) {
             button.classList.remove('following');
             button.innerHTML = '<i class="fas fa-user-plus"></i> Follow';
@@ -632,7 +726,6 @@
             );
             
         } catch (error) {
-            // Revert
             if (isFollowing) {
                 button.classList.add('following');
                 button.innerHTML = '<i class="fas fa-user-check"></i> Following';
@@ -671,7 +764,6 @@
         modal.style.display = 'none';
     }
 
-    // Close reel on Escape
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeReel();
@@ -693,7 +785,6 @@
                 // User cancelled
             }
         } else {
-            // Fallback: copy to clipboard
             navigator.clipboard.writeText(url).then(() => {
                 showToast('Profile link copied to clipboard!', 'success');
             }).catch(() => {
@@ -704,7 +795,6 @@
 
     // ============ INITIALIZATION ============
     document.addEventListener('DOMContentLoaded', function() {
-        // If URL hash is #reels, switch to reels tab
         if (window.location.hash === '#reels') {
             const reelsTab = document.querySelector('[data-tab="reels"]');
             if (reelsTab) {
