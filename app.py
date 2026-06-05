@@ -51,9 +51,9 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 
 # File upload configuration
 UPLOAD_FOLDER = os.path.join('static', 'uploads')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm', 'avi', 'mkv', 'wmv', 'flv', '3gp', 'm4v', 'ogg', 'ogv', 'mpeg', 'mpg', 'ts', 'm2ts', 'mts'}
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'webm'}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'webm', 'avi', 'mkv', 'wmv', 'flv', '3gp', 'm4v', 'ogg', 'ogv', 'mpeg', 'mpg', 'ts', 'm2ts', 'mts'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB for video support
 
@@ -676,20 +676,19 @@ def new_post():
             
             if 'image' in request.files:
                 file = request.files['image']
-                if file and file.filename and allowed_image_file(file.filename):
-                    url = save_picture(file)
-                    if url:
-                        post.image = url
-            
-            if 'video' in request.files:
-                file = request.files['video']
-                if file and file.filename and allowed_video_file(file.filename):
-                    video_url, thumbnail_url, duration = save_video(file)
-                    if video_url:
-                        post.video = video_url
-                        post.thumbnail = thumbnail_url
-                        post.video_duration = duration
-                        post.video_processed = True
+                if file and file.filename:
+                    # Check if file is video or image by extension
+                    if allowed_video_file(file.filename):
+                        video_url, thumbnail_url, duration = save_video(file)
+                        if video_url:
+                            post.video = video_url
+                            post.thumbnail = thumbnail_url
+                            post.video_duration = duration
+                            post.video_processed = True
+                    elif allowed_image_file(file.filename):
+                        url = save_picture(file)
+                        if url:
+                            post.image = url
             
             db.session.add(post)
             db.session.commit()
@@ -895,17 +894,16 @@ def create_story():
             
             if 'image' in request.files:
                 file = request.files['image']
-                if file and file.filename and allowed_image_file(file.filename):
-                    url = save_picture(file)
-                    if url:
-                        story.image = url
-            
-            if 'video' in request.files:
-                file = request.files['video']
-                if file and file.filename and allowed_video_file(file.filename):
-                    video_url, _, _ = save_video(file)
-                    if video_url:
-                        story.video = video_url
+                if file and file.filename:
+                    # Check if file is video or image by extension
+                    if allowed_video_file(file.filename):
+                        video_url, _, _ = save_video(file)
+                        if video_url:
+                            story.video = video_url
+                    elif allowed_image_file(file.filename):
+                        url = save_picture(file)
+                        if url:
+                            story.image = url
             
             if not story.image and not story.video:
                 flash('Please upload an image or video for your story.', 'danger')
