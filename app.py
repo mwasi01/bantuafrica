@@ -5,6 +5,7 @@ from flask import Flask, render_template, url_for, flash, redirect, request, jso
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.utils import secure_filename
 from PIL import Image
 import secrets
@@ -61,6 +62,10 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
+
+# Initialize SocketIO for real-time call signaling
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+print("✅ SocketIO initialized for real-time calling")
 
 # CSRF protection
 csrf = None
@@ -259,12 +264,12 @@ class Call(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    call_type = db.Column(db.String(10), default='video')  # 'video' or 'audio'
-    status = db.Column(db.String(20), default='pending')  # pending, active, ended, missed
+    call_type = db.Column(db.String(10), default='video')
+    status = db.Column(db.String(20), default='pending')
     room_id = db.Column(db.String(50), unique=True)
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     ended_at = db.Column(db.DateTime)
-    duration = db.Column(db.Integer, default=0)  # in seconds
+    duration = db.Column(db.Integer, default=0)
 
 class UserInterest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -472,6 +477,62 @@ def utility_processor():
             return generate_csrf()
         return ''
     return dict(csrf_token=get_csrf_token)
+
+# ============ SOCKETIO EVENTS FOR REAL-TIME CALLS ============
+
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        join_room(f"user_{current_user.id}")
+        print(f"✅ User {current_user.username} connected via WebSocket")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if current_user.is_authenticated:
+        leave_room(f"user_{current_user.id}")
+
+@socketio.on('call_user')
+def handle_call_user(data):
+    """Forward call signal to the receiver"""
+    receiver_username = data.get('receiver')
+    receiver = User.query.filter_by(username=receiver_username).first()
+    if receiver:
+        emit('incoming_call', {
+            'caller': current_user.username,
+            'caller_image': current_user.profile_image,
+            'call_id': data.get('call_id'),
+            'room_id': data.get('room_id'),
+            'call_type': data.get('call_type', 'video')
+        }, room=f"user_{receiver.id}")
+        print(f"📞 Call signal sent to {receiver.username}")
+
+@socketio.on('call_accepted')
+def handle_call_accepted(data):
+    """Notify caller that call was accepted"""
+    caller_username = data.get('caller')
+    caller = User.query.filter_by(username=caller_username).first()
+    if caller:
+        emit('call_accepted', {
+            'room_id': data.get('room_id')
+        }, room=f"user_{caller.id}")
+
+@socketio.on('call_rejected')
+def handle_call_rejected(data):
+    """Notify caller that call was rejected"""
+    caller_username = data.get('caller')
+    caller = User.query.filter_by(username=caller_username).first()
+    if caller:
+        emit('call_rejected', {
+            'message': 'Call declined'
+        }, room=f"user_{caller.id}")
+
+@socketio.on('call_ended')
+def handle_call_ended(data):
+    """Notify other party that call ended"""
+    other_username = data.get('other_user')
+    other = User.query.filter_by(username=other_username).first()
+    if other:
+        emit('call_ended', {}, room=f"user_{other.id}")
 
 # ============ ROUTES ============
 
@@ -847,7 +908,6 @@ def call_page(call_id):
     """Render the call interface page"""
     call = Call.query.get_or_404(call_id)
     
-    # Only allow caller or receiver to access
     if current_user.id not in [call.caller_id, call.receiver_id]:
         flash('You are not part of this call.', 'danger')
         return redirect(url_for('messages'))
@@ -897,6 +957,28 @@ def initiate_call():
         )
         db.session.add(call)
         db.session.commit()
+        
+        # Emit SocketIO event to notify receiver in real-time
+        try:
+            socketio.emit('incoming_call', {
+                'caller': current_user.username,
+                'caller_image': current_user.profile_image,
+                'call_id': call.id,
+                'room_id': room_id,
+                'call_type': call_type
+            }, room=f"user_{receiver.id}")
+            print(f"📞 SocketIO call signal sent to {receiver.username}")
+        except Exception as e:
+            print(f"⚠️ SocketIO emit failed (user may be offline): {e}")
+        
+        # Also create a database notification as fallback
+        create_notification(
+            user=receiver,
+            actor=current_user,
+            notif_type='call',
+            message=f'Incoming {call_type} call from {current_user.username}',
+            target_url=f'/call/{call.id}?room={room_id}&type={call_type}'
+        )
         
         return jsonify({
             'call_id': call.id,
@@ -1274,4 +1356,4 @@ initialize_database()
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('DEBUG', 'False').lower() == 'true'
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    socketio.run(app, host='0.0.0.0', port=port, debug=debug)
