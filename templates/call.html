@@ -178,10 +178,6 @@
         background: #dc2626;
     }
 
-    .call-control-btn .icon-label {
-        display: none;
-    }
-
     @media (max-width: 480px) {
         .call-controls {
             gap: 14px;
@@ -316,7 +312,7 @@
         text-decoration: none;
     }
 
-    /* Loading */
+    /* Connecting Overlay */
     .connecting-overlay {
         position: absolute;
         inset: 0;
@@ -387,7 +383,7 @@
         <img src="{{ url_for('static', filename='uploads/' + other_user.profile_image) }}" alt="{{ other_user.username }}" class="caller-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
         {% endif %}
         <div class="caller-name">{{ other_user.username }}</div>
-        <div class="call-type" id="incomingCallType">Video Call</div>
+        <div class="call-type" id="incomingCallType">{{ 'Video Call' if call_type == 'video' else 'Voice Call' }}</div>
         <div class="incoming-actions">
             <div style="text-align: center;">
                 <button class="incoming-btn reject" onclick="rejectCall()">
@@ -438,7 +434,25 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <script>
+    // ============ SOCKETIO CONNECTION ============
+    const socket = io();
+    const currentUser = "{{ current_user.username }}";
+    const otherUser = "{{ other_user.username }}";
+
+    socket.on('connect', () => {
+        console.log('✅ SocketIO connected for call signaling');
+    });
+
+    // Listen for call ended by remote party
+    socket.on('call_ended', () => {
+        if (isCallActive) {
+            showToast('Call ended by other party', 'info');
+            endCall();
+        }
+    });
+
     // ============ WEBRTC CALL STATE ============
     let localStream = null;
     let peerConnection = null;
@@ -458,6 +472,13 @@
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' }
+            {% if turn_server %}
+            ,{
+                urls: '{{ turn_server }}',
+                username: '{{ turn_username }}',
+                credential: '{{ turn_credential }}'
+            }
+            {% endif %}
         ]
     };
 
@@ -473,7 +494,6 @@
     // ============ START OUTGOING CALL ============
     async function startCall() {
         try {
-            // Request media
             if (callType === 'video') {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
@@ -486,34 +506,34 @@
                 });
             }
 
-            // Show local video
             const localVideo = document.getElementById('localVideo');
             localVideo.srcObject = localStream;
 
-            // Hide connecting, show controls
             document.getElementById('connectingOverlay').style.display = 'none';
             document.getElementById('callControls').style.display = 'flex';
             if (callType === 'audio') {
                 document.getElementById('localVideoWrap').style.display = 'none';
             }
 
-            // Create peer connection
             await createPeerConnection();
 
-            // Add local stream to peer
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
             });
 
-            // Create offer
             const offer = await peerConnection.createOffer();
             await peerConnection.setLocalDescription(offer);
 
-            // Start call timer
+            // Send offer via SocketIO
+            socket.emit('call_signal', {
+                receiver: otherUser,
+                signal: { type: 'offer', sdp: peerConnection.localDescription },
+                room_id: roomId
+            });
+
             startCallTimer();
             isCallActive = true;
 
-            // Update call status via API
             if (currentCallId) {
                 await fetch(`/api/call/${currentCallId}/status`, {
                     method: 'POST',
@@ -535,11 +555,23 @@
     // ============ ACCEPT INCOMING CALL ============
     async function acceptCall() {
         document.getElementById('incomingOverlay').style.display = 'none';
+        
+        // Notify caller via SocketIO
+        socket.emit('call_accepted', {
+            caller: otherUser,
+            room_id: roomId
+        });
+        
         await startCall();
     }
 
     // ============ REJECT CALL ============
     async function rejectCall() {
+        // Notify caller via SocketIO
+        socket.emit('call_rejected', {
+            caller: otherUser
+        });
+        
         if (currentCallId) {
             await fetch(`/api/call/${currentCallId}/status`, {
                 method: 'POST',
@@ -558,18 +590,20 @@
         isCallActive = false;
         clearInterval(callTimerInterval);
 
-        // Stop all tracks
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
         }
 
-        // Close peer connection
         if (peerConnection) {
             peerConnection.close();
             peerConnection = null;
         }
 
-        // Update call status
+        // Notify other party via SocketIO
+        socket.emit('call_ended', {
+            other_user: otherUser
+        });
+
         if (currentCallId) {
             await fetch(`/api/call/${currentCallId}/status`, {
                 method: 'POST',
@@ -581,7 +615,6 @@
             });
         }
 
-        // Show ended overlay
         document.getElementById('callControls').style.display = 'none';
         document.getElementById('endedOverlay').style.display = 'flex';
         document.getElementById('callDuration').textContent = `Duration: ${formatCallTime(callSeconds)}`;
@@ -591,7 +624,6 @@
     async function createPeerConnection() {
         peerConnection = new RTCPeerConnection(iceServers);
 
-        // Handle remote stream
         peerConnection.ontrack = (event) => {
             const remoteVideo = document.getElementById('remoteVideo');
             if (remoteVideo.srcObject !== event.streams[0]) {
@@ -600,21 +632,45 @@
             }
         };
 
-        // Handle ICE candidates
         peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                // In production, send this to the other peer via signaling server
-                console.log('ICE candidate:', event.candidate);
+                // Send ICE candidate via SocketIO
+                socket.emit('call_signal', {
+                    receiver: otherUser,
+                    signal: { type: 'ice-candidate', candidate: event.candidate },
+                    room_id: roomId
+                });
             }
         };
 
-        // Handle connection state
         peerConnection.onconnectionstatechange = () => {
             if (peerConnection.connectionState === 'disconnected' || 
                 peerConnection.connectionState === 'failed') {
                 endCall();
             }
         };
+
+        // Listen for remote signals
+        socket.on('call_signal', async (data) => {
+            if (data.signal.type === 'offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('call_signal', {
+                    receiver: otherUser,
+                    signal: { type: 'answer', sdp: peerConnection.localDescription },
+                    room_id: roomId
+                });
+            } else if (data.signal.type === 'answer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal.sdp));
+            } else if (data.signal.type === 'ice-candidate') {
+                try {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.signal.candidate));
+                } catch (e) {
+                    console.log('ICE candidate error:', e);
+                }
+            }
+        });
     }
 
     // ============ TOGGLE MICROPHONE ============
@@ -691,19 +747,16 @@
 
             const newVideoTrack = newStream.getVideoTracks()[0];
 
-            // Replace track in peer connection
             const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
             if (sender) {
                 sender.replaceTrack(newVideoTrack);
             }
 
-            // Update local stream
             localStream.removeTrack(videoTrack);
             videoTrack.stop();
             localStream.addTrack(newVideoTrack);
 
-            const localVideo = document.getElementById('localVideo');
-            localVideo.srcObject = localStream;
+            document.getElementById('localVideo').srcObject = localStream;
         } catch (e) {
             console.log('Could not switch camera:', e);
         }
@@ -738,9 +791,10 @@
         document.getElementById('localVideoWrap').style.display = 'none';
     }
 
-    // ============ CLEANUP ON PAGE LEAVE ============
+    // ============ CLEANUP ============
     window.addEventListener('beforeunload', () => {
         if (isCallActive) {
+            socket.emit('call_ended', { other_user: otherUser });
             endCall();
         }
     });
