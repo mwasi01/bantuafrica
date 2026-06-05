@@ -4,10 +4,457 @@
 
 {% block content %}
 <style>
-    .feed-container {
-        max-width: 500px;
-        margin: 0 auto;
-        padding-bottom: 70px;
+    /* ============ TIKTOK-STYLE FEED ============ */
+    .feed-wrapper {
+        height: 100vh;
+        height: 100dvh;
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+        background: #000;
+    }
+
+    .feed-wrapper::-webkit-scrollbar { display: none; }
+
+    .post-card {
+        height: 100vh;
+        height: 100dvh;
+        scroll-snap-align: start;
+        position: relative;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    /* Media Container */
+    .post-media-wrap {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .post-media-wrap img,
+    .post-media-wrap video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    /* Tap to pause overlay */
+    .pause-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    .pause-overlay.visible {
+        opacity: 1;
+    }
+
+    .pause-overlay i {
+        font-size: 70px;
+        color: rgba(255,255,255,0.8);
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+        animation: fadePause 0.6s ease-out forwards;
+    }
+
+    @keyframes fadePause {
+        0% { transform: scale(0.5); opacity: 1; }
+        100% { transform: scale(1.2); opacity: 0; }
+    }
+
+    /* Right Side Actions */
+    .post-actions-sidebar {
+        position: absolute;
+        right: 12px;
+        bottom: 140px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        z-index: 10;
+    }
+
+    .action-icon-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        transition: transform 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .action-icon-btn:active {
+        transform: scale(0.85);
+    }
+
+    .action-icon-btn i {
+        font-size: 32px;
+        filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+        transition: color 0.15s;
+    }
+
+    .action-icon-btn.liked i {
+        color: #ef4444;
+    }
+
+    .action-icon-btn .action-label {
+        font-size: 11px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Bottom Info Section */
+    .post-info-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 80px;
+        padding: 20px 16px 100px;
+        background: linear-gradient(transparent, rgba(0,0,0,0.85));
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    .post-info-bottom > * {
+        pointer-events: auto;
+    }
+
+    .post-author-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+    .post-author-row img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(255,255,255,0.5);
+    }
+
+    .post-author-row .username {
+        color: white;
+        font-weight: 700;
+        font-size: 15px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        text-decoration: none;
+    }
+
+    .follow-btn-small {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.8);
+        color: white;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .follow-btn-small.following {
+        background: white;
+        color: black;
+        border-color: white;
+    }
+
+    .post-caption {
+        color: white;
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 6px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .caption-expand {
+        color: rgba(255,255,255,0.7);
+        font-size: 13px;
+        cursor: pointer;
+        font-weight: 600;
+        display: inline-block;
+        margin-left: 4px;
+        pointer-events: auto;
+    }
+
+    .post-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .post-category-tag {
+        background: rgba(255,255,255,0.2);
+        color: white;
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: none;
+        backdrop-filter: blur(4px);
+    }
+
+    .post-time {
+        color: rgba(255,255,255,0.7);
+        font-size: 11px;
+    }
+
+    .music-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: white;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+
+    .music-note i {
+        animation: spin 3s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Audio Toggle */
+    .audio-toggle {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(0,0,0,0.5);
+        color: white;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        border: none;
+        font-size: 16px;
+        backdrop-filter: blur(4px);
+        transition: background 0.2s;
+    }
+
+    .audio-toggle:hover {
+        background: rgba(0,0,0,0.7);
+    }
+
+    /* Comments Panel */
+    .comments-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-radius: 20px 20px 0 0;
+        z-index: 100;
+        max-height: 70vh;
+        overflow-y: auto;
+        transform: translateY(100%);
+        transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+    }
+
+    .comments-panel.open {
+        transform: translateY(0);
+    }
+
+    .comments-panel-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 5;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .comments-panel-header h4 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .comments-panel-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 4px;
+    }
+
+    .comments-panel-body {
+        padding: 16px;
+        padding-bottom: 100px;
+    }
+
+    .comment-item {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .comment-item img {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .comment-item .comment-content {
+        flex: 1;
+    }
+
+    .comment-item .comment-author {
+        font-weight: 700;
+        font-size: 13px;
+        color: var(--text-primary);
+    }
+
+    .comment-item .comment-text {
+        font-size: 13px;
+        color: var(--text-primary);
+        margin-top: 2px;
+        line-height: 1.4;
+    }
+
+    .comment-item .comment-time {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+    }
+
+    .comments-input-area {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 10px 16px var(--safe-bottom, 20px);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .comments-input {
+        flex: 1;
+        padding: 10px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 13px;
+        outline: none;
+    }
+
+    .comments-submit {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+    }
+
+    /* Overlay backdrop */
+    .comments-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .comments-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Heart burst animation */
+    .heart-burst {
+        position: fixed;
+        pointer-events: none;
+        z-index: 200;
+        font-size: 90px;
+        color: #ef4444;
+        animation: heartBurst 0.8s ease-out forwards;
+        transform: translate(-50%, -50%);
+    }
+
+    @keyframes heartBurst {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+        50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
+        100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+    }
+
+    /* Empty feed */
+    .empty-feed {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-primary);
+        text-align: center;
+        padding: 20px;
+    }
+
+    .empty-feed i {
+        font-size: 56px;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-feed h2 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        font-size: 20px;
+    }
+
+    .empty-feed p {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+
+    .empty-feed a {
+        background: var(--accent);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
     }
 
     /* Mobile Navigation */
@@ -17,17 +464,16 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: white;
-        border-top: 1px solid var(--border-color);
+        background: rgba(0,0,0,0.9);
+        border-top: 1px solid rgba(255,255,255,0.1);
         padding: 8px 0 var(--safe-bottom, 20px);
-        z-index: 1000;
+        z-index: 50;
         justify-content: space-around;
-        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+        backdrop-filter: blur(10px);
     }
 
     @media (min-width: 992px) {
         .mobile-nav { display: none; }
-        .feed-container { padding-bottom: 20px; }
     }
 
     .mobile-nav-item {
@@ -35,14 +481,14 @@
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        color: var(--text-secondary);
+        color: rgba(255,255,255,0.6);
         font-size: 10px;
         text-decoration: none;
         transition: color 0.2s;
         padding: 4px 12px;
     }
 
-    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item.active { color: white; }
     .mobile-nav-item i { font-size: 20px; }
 
     .mobile-nav-item.create-btn {
@@ -55,260 +501,71 @@
         align-items: center;
         justify-content: center;
         margin-top: -15px;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-    }
-
-    /* Post Card */
-    .post-card {
-        background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        margin: 12px 16px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .post-media-container {
-        position: relative;
-        background: #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        max-height: 500px;
-        overflow: hidden;
-    }
-
-    .post-media-container img,
-    .post-media-container video {
-        width: 100%;
-        max-height: 500px;
-        object-fit: contain;
-    }
-
-    .post-media-container video {
-        cursor: pointer;
-    }
-
-    /* Video play/pause overlay */
-    .video-play-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(0,0,0,0.2);
-        opacity: 0;
-        transition: opacity 0.3s;
-        pointer-events: none;
-    }
-
-    .video-play-overlay i {
-        font-size: 50px;
-        color: white;
-        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
-    }
-
-    .post-media-container.paused .video-play-overlay {
-        opacity: 1;
-    }
-
-    .post-body {
-        padding: 14px 16px;
-    }
-
-    .post-author {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .post-author img {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid var(--border-color);
-    }
-
-    .post-author .username {
-        font-weight: 600;
-        font-size: 14px;
-        color: var(--text-primary);
-        text-decoration: none;
-    }
-
-    .post-author .username:hover {
-        color: var(--accent);
-    }
-
-    .post-content {
-        font-size: 14px;
-        line-height: 1.5;
-        color: var(--text-primary);
-        margin-bottom: 8px;
-    }
-
-    .post-meta {
-        display: flex;
-        gap: 16px;
-        font-size: 12px;
-        color: var(--text-secondary);
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .post-category {
-        background: #eff6ff;
-        color: var(--accent);
-        padding: 2px 10px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .post-category:hover {
-        background: var(--accent);
-        color: white;
-    }
-
-    .post-actions {
-        display: flex;
-        gap: 20px;
-        padding: 10px 16px;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .action-btn {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 14px;
-        cursor: pointer;
-        padding: 6px 0;
-        transition: all 0.2s;
-    }
-
-    .action-btn:hover { color: var(--accent); }
-    .action-btn.liked { color: #ef4444; }
-    .action-btn.liked i { animation: heartPop 0.3s ease; }
-
-    @keyframes heartPop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.3); }
-        100% { transform: scale(1); }
-    }
-
-    .empty-feed {
-        text-align: center;
-        padding: 60px 20px;
-    }
-
-    .empty-feed i {
-        font-size: 48px;
-        color: var(--text-secondary);
-        margin-bottom: 16px;
-        opacity: 0.5;
-    }
-
-    .empty-feed h2 {
-        color: var(--text-primary);
-        margin-bottom: 8px;
-    }
-
-    .empty-feed p {
-        color: var(--text-secondary);
-        margin-bottom: 20px;
-    }
-
-    .empty-feed .discover-btn {
-        background: var(--accent);
-        color: white;
-        padding: 12px 30px;
-        border-radius: 25px;
-        text-decoration: none;
-        font-weight: 600;
-        display: inline-block;
-    }
-
-    /* Loading spinner */
-    .spinner {
-        width: 30px;
-        height: 30px;
-        border: 3px solid var(--border-color);
-        border-top-color: var(--accent);
-        border-radius: 50%;
-        animation: spin 0.6s linear infinite;
-        margin: 20px auto;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    @media (max-width: 480px) {
-        .post-card {
-            margin: 8px 0;
-            border-radius: 0;
-            border-left: none;
-            border-right: none;
-        }
-        .feed-container {
-            padding-bottom: 80px;
-        }
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
     }
 </style>
 
-<div class="feed-container" id="feedContainer">
+<div class="feed-wrapper" id="feedWrapper">
     {% if posts %}
         {% for post in posts %}
-        <div class="post-card" data-post-id="{{ post.id }}">
-            <!-- Media: Video or Image -->
-            {% if post.video %}
-            <div class="post-media-container" id="mediaContainer{{ post.id }}">
-                {% if post.video.startswith('http') %}
-                <video 
-                    src="{{ post.video }}"
-                    poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"
-                    autoplay
-                    loop
-                    muted
-                    playsinline
-                    preload="metadata"
-                    id="postVideo{{ post.id }}"
-                    onclick="toggleVideo({{ post.id }})"
-                ></video>
-                {% else %}
-                <video 
-                    src="{{ url_for('static', filename='uploads/' + post.video) }}"
-                    poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
-                    autoplay
-                    loop
-                    muted
-                    playsinline
-                    preload="metadata"
-                    id="postVideo{{ post.id }}"
-                    onclick="toggleVideo({{ post.id }})"
-                ></video>
+        <div class="post-card" data-post-id="{{ post.id }}" id="post{{ post.id }}">
+            <!-- Media -->
+            <div class="post-media-wrap" ondblclick="doubleTapLike({{ post.id }}, event)">
+                {% if post.video %}
+                    {% if post.video.startswith('http') %}
+                    <video src="{{ post.video }}"
+                           poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"
+                           loop playsinline preload="metadata"
+                           id="video{{ post.id }}"
+                           muted></video>
+                    {% else %}
+                    <video src="{{ url_for('static', filename='uploads/' + post.video) }}"
+                           poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
+                           loop playsinline preload="metadata"
+                           id="video{{ post.id }}"
+                           muted></video>
+                    {% endif %}
+                    <button class="audio-toggle" id="audioBtn{{ post.id }}" onclick="toggleAudio({{ post.id }})" title="Unmute">
+                        <i class="fas fa-volume-mute"></i>
+                    </button>
+                {% elif post.image %}
+                    {% if post.image.startswith('http') %}
+                    <img src="{{ post.image }}" alt="{{ post.title }}">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="{{ post.title }}">
+                    {% endif %}
                 {% endif %}
-                <div class="video-play-overlay" id="videoOverlay{{ post.id }}">
-                    <i class="fas fa-play-circle"></i>
+                <div class="pause-overlay" id="pauseOverlay{{ post.id }}">
+                    <i class="fas fa-pause"></i>
                 </div>
             </div>
-            {% elif post.image %}
-            <div class="post-media-container">
-                {% if post.image.startswith('http') %}
-                <img src="{{ post.image }}" alt="{{ post.title }}" loading="lazy">
-                {% else %}
-                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="{{ post.title }}" loading="lazy">
-                {% endif %}
+
+            <!-- Right Side Actions -->
+            <div class="post-actions-sidebar">
+                <button class="action-icon-btn like-btn" data-post-id="{{ post.id }}" onclick="handleLike({{ post.id }}, this)">
+                    <i class="far fa-heart"></i>
+                    <span class="action-label">{{ post.like_count() }}</span>
+                </button>
+                
+                <button class="action-icon-btn" onclick="openComments({{ post.id }})">
+                    <i class="far fa-comment"></i>
+                    <span class="action-label">{{ post.comment_count() }}</span>
+                </button>
+                
+                <button class="action-icon-btn" onclick="sharePost('{{ post.id }}')">
+                    <i class="fas fa-share"></i>
+                    <span class="action-label">Share</span>
+                </button>
+                
+                <button class="action-icon-btn">
+                    <i class="far fa-bookmark"></i>
+                    <span class="action-label">Save</span>
+                </button>
             </div>
-            {% endif %}
-            
-            <div class="post-body">
-                <div class="post-author">
+
+            <!-- Bottom Info -->
+            <div class="post-info-bottom">
+                <div class="post-author-row">
                     <a href="{{ url_for('user_profile', username=post.author.username) }}">
                         {% if post.author.profile_image and post.author.profile_image.startswith('http') %}
                         <img src="{{ post.author.profile_image }}" alt="{{ post.author.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
@@ -316,44 +573,53 @@
                         <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" alt="{{ post.author.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
                         {% endif %}
                     </a>
-                    <div>
-                        <a href="{{ url_for('user_profile', username=post.author.username) }}" class="username">@{{ post.author.username }}</a>
-                        {% if post.category %}
-                        <a href="{{ url_for('search', q=post.category) }}" class="post-category">{{ post.category }}</a>
-                        {% endif %}
-                    </div>
+                    <a href="{{ url_for('user_profile', username=post.author.username) }}" class="username">@{{ post.author.username }}</a>
+                    {% if post.author != current_user and not current_user.is_following(post.author) %}
+                    <button class="follow-btn-small follow-toggle" data-username="{{ post.author.username }}" onclick="toggleFollow('{{ post.author.username }}', this)">Follow</button>
+                    {% endif %}
                 </div>
-                <div class="post-content">{{ post.content[:200] }}</div>
-                <div class="post-meta">
-                    <span>{{ post.created_at.strftime('%b %d, %Y') }}</span>
-                    <span>{{ post.like_count() }} likes</span>
-                    <span>{{ post.comment_count() }} comments</span>
+                <div class="post-caption" id="caption{{ post.id }}">
+                    <span class="caption-text-truncated">{{ post.content[:80] }}{% if post.content|length > 80 %}... <span class="caption-expand" onclick="expandCaption({{ post.id }})">more</span>{% endif %}</span>
+                    <span class="caption-text-full" style="display:none;">{{ post.content }} <span class="caption-expand" onclick="collapseCaption({{ post.id }})">less</span></span>
                 </div>
-            </div>
-            
-            <div class="post-actions">
-                <button class="action-btn like-btn" data-post-id="{{ post.id }}" onclick="handleLike({{ post.id }}, this)">
-                    <i class="far fa-heart"></i> <span>{{ post.like_count() }}</span>
-                </button>
-                <button class="action-btn" onclick="window.location.href='{{ url_for('view_post', post_id=post.id) }}'">
-                    <i class="far fa-comment"></i> <span>{{ post.comment_count() }}</span>
-                </button>
-                <button class="action-btn" onclick="sharePost('{{ post.id }}', '{{ post.title|e }}', '{{ post.content[:100]|e }}')">
-                    <i class="far fa-share-square"></i> Share
-                </button>
+                <div class="post-meta-row">
+                    {% if post.category %}
+                    <a href="{{ url_for('search', q=post.category) }}" class="post-category-tag">{{ post.category }}</a>
+                    {% endif %}
+                    <span class="post-time">{{ post.created_at.strftime('%b %d') }}</span>
+                </div>
+                {% if post.video %}
+                <div class="music-note">
+                    <i class="fas fa-music"></i> Original Sound · @{{ post.author.username }}
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
-        
-        <div id="scrollSentinel" style="height: 1px;"></div>
     {% else %}
         <div class="empty-feed">
             <i class="fas fa-users"></i>
             <h2>Welcome to Bantu Africa!</h2>
             <p>Follow people to see their posts here</p>
-            <a href="{{ url_for('search') }}" class="discover-btn">Discover People</a>
+            <a href="{{ url_for('search') }}">Discover People</a>
         </div>
     {% endif %}
+</div>
+
+<!-- Comments Panel -->
+<div class="comments-backdrop" id="commentsBackdrop" onclick="closeComments()"></div>
+<div class="comments-panel" id="commentsPanel">
+    <div class="comments-panel-header">
+        <h4>Comments</h4>
+        <button class="comments-panel-close" onclick="closeComments()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="comments-panel-body" id="commentsPanelBody">
+        <p style="text-align:center;color:var(--text-secondary);">Loading comments...</p>
+    </div>
+    <div class="comments-input-area">
+        <input type="text" class="comments-input" id="commentInput" placeholder="Add a comment...">
+        <button class="comments-submit" id="commentSubmitBtn" onclick="submitPanelComment()">Post</button>
+    </div>
 </div>
 
 <!-- Mobile Bottom Navigation -->
@@ -388,201 +654,207 @@
 
 {% block scripts %}
 <script>
+    let activePostId = null;
+
     // ============ VIDEO AUTOPLAY ON SCROLL ============
-    document.addEventListener('DOMContentLoaded', function() {
-        const videoObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const video = entry.target.querySelector('video');
-                const container = entry.target;
-                if (!video) return;
-                
-                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-                    video.play().catch(() => {});
-                    container.classList.remove('paused');
-                } else {
-                    video.pause();
-                    container.classList.add('paused');
-                }
-            });
-        }, {
-            threshold: [0, 0.5, 1],
-            rootMargin: '-10% 0px -10% 0px'
-        });
-        
-        document.querySelectorAll('.post-media-container').forEach(container => {
-            if (container.querySelector('video')) {
-                videoObserver.observe(container);
+    const videoObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target;
+            if (entry.isIntersecting && entry.intersectionRatio > 0.6) {
+                video.play().catch(() => {});
+            } else {
+                video.pause();
             }
         });
-    });
+    }, { threshold: [0, 0.6, 1] });
 
-    // ============ TOGGLE VIDEO PLAY/PAUSE ============
-    function toggleVideo(postId) {
-        const video = document.getElementById('postVideo' + postId);
-        const container = document.getElementById('mediaContainer' + postId);
+    document.querySelectorAll('video').forEach(v => videoObserver.observe(v));
+
+    // ============ AUDIO TOGGLE ============
+    function toggleAudio(postId) {
+        const video = document.getElementById('video' + postId);
+        const btn = document.getElementById('audioBtn' + postId);
         if (!video) return;
         
-        if (video.paused) {
-            video.play();
-            container.classList.remove('paused');
+        video.muted = !video.muted;
+        const icon = btn.querySelector('i');
+        if (video.muted) {
+            icon.className = 'fas fa-volume-mute';
+            btn.title = 'Unmute';
         } else {
-            video.pause();
-            container.classList.add('paused');
+            icon.className = 'fas fa-volume-up';
+            btn.title = 'Mute';
         }
     }
 
-    // ============ LIKE HANDLER ============
+    // ============ DOUBLE TAP LIKE ============
+    function doubleTapLike(postId, event) {
+        const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
+        if (likeBtn && !likeBtn.classList.contains('liked')) {
+            handleLike(postId, likeBtn);
+            showHeartBurst(event.clientX, event.clientY);
+        }
+    }
+
+    function showHeartBurst(x, y) {
+        const heart = document.createElement('div');
+        heart.className = 'heart-burst';
+        heart.innerHTML = '<i class="fas fa-heart"></i>';
+        heart.style.left = x + 'px';
+        heart.style.top = y + 'px';
+        document.body.appendChild(heart);
+        setTimeout(() => heart.remove(), 800);
+    }
+
+    // ============ LIKE ============
     async function handleLike(postId, button) {
         const wasLiked = button.classList.contains('liked');
         const icon = button.querySelector('i');
-        const span = button.querySelector('span');
-        let count = parseInt(span.textContent) || 0;
-        
+        const label = button.querySelector('.action-label');
+        let count = parseInt(label.textContent) || 0;
+
         if (wasLiked) {
             button.classList.remove('liked');
             icon.className = 'far fa-heart';
-            span.textContent = Math.max(0, count - 1);
+            label.textContent = Math.max(0, count - 1);
         } else {
             button.classList.add('liked');
             icon.className = 'fas fa-heart';
-            span.textContent = count + 1;
+            label.textContent = count + 1;
         }
-        
+
         try {
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             const response = await fetch(`/api/post/${postId}/like`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
-                }
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' }
             });
             const data = await response.json();
-            span.textContent = data.like_count;
-            if (data.liked) {
-                button.classList.add('liked');
-                icon.className = 'fas fa-heart';
-            } else {
-                button.classList.remove('liked');
-                icon.className = 'far fa-heart';
+            label.textContent = data.like_count;
+        } catch (e) {}
+    }
+
+    // ============ FOLLOW ============
+    async function toggleFollow(username, button) {
+        const isFollowing = button.classList.contains('following');
+        if (isFollowing) {
+            button.classList.remove('following');
+            button.textContent = 'Follow';
+            button.style.background = 'transparent';
+            button.style.color = 'white';
+        } else {
+            button.classList.add('following');
+            button.textContent = 'Following';
+            button.style.background = 'white';
+            button.style.color = 'black';
+        }
+        try {
+            await fetch(isFollowing ? `/unfollow/${username}` : `/follow/${username}`);
+        } catch (e) {}
+    }
+
+    // ============ CAPTION EXPAND ============
+    function expandCaption(postId) {
+        const caption = document.getElementById('caption' + postId);
+        caption.querySelector('.caption-text-truncated').style.display = 'none';
+        caption.querySelector('.caption-text-full').style.display = 'inline';
+    }
+
+    function collapseCaption(postId) {
+        const caption = document.getElementById('caption' + postId);
+        caption.querySelector('.caption-text-full').style.display = 'none';
+        caption.querySelector('.caption-text-truncated').style.display = 'inline';
+    }
+
+    // ============ COMMENTS PANEL ============
+    function openComments(postId) {
+        activePostId = postId;
+        document.getElementById('commentsPanel').classList.add('open');
+        document.getElementById('commentsBackdrop').classList.add('open');
+        loadComments(postId);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeComments() {
+        document.getElementById('commentsPanel').classList.remove('open');
+        document.getElementById('commentsBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+        activePostId = null;
+    }
+
+    async function loadComments(postId) {
+        const body = document.getElementById('commentsPanelBody');
+        body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);">Loading comments...</p>';
+        try {
+            const response = await fetch(`/post/${postId}`);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const comments = doc.querySelectorAll('.comment-card');
+            
+            if (comments.length === 0) {
+                body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:20px;">No comments yet. Be the first!</p>';
+                return;
             }
-        } catch (error) {
-            if (wasLiked) {
-                button.classList.add('liked');
-                icon.className = 'fas fa-heart';
-                span.textContent = count;
-            } else {
-                button.classList.remove('liked');
-                icon.className = 'far fa-heart';
-                span.textContent = count;
-            }
+            
+            body.innerHTML = '';
+            comments.forEach(c => {
+                const avatar = c.querySelector('.comment-avatar')?.src || '/static/uploads/default.jpg';
+                const author = c.querySelector('.comment-author')?.textContent?.trim() || 'User';
+                const text = c.querySelector('.comment-text')?.textContent?.trim() || '';
+                const time = c.querySelector('.comment-time')?.textContent?.trim() || '';
+                
+                body.innerHTML += `
+                    <div class="comment-item">
+                        <img src="${avatar}" onerror="this.src='/static/uploads/default.jpg'">
+                        <div class="comment-content">
+                            <div class="comment-author">${author}</div>
+                            <div class="comment-text">${escapeHtml(text)}</div>
+                            <div class="comment-time">${time}</div>
+                        </div>
+                    </div>`;
+            });
+        } catch (e) {
+            body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);">Could not load comments.</p>';
         }
     }
 
-    // ============ SHARE POST ============
-    async function sharePost(postId, title, content) {
+    async function submitPanelComment() {
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+        if (!content || !activePostId) return;
+
+        const btn = document.getElementById('commentSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = '...';
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            await fetch(`/api/post/${activePostId}/comment`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' },
+                body: JSON.stringify({ content })
+            });
+            input.value = '';
+            loadComments(activePostId);
+            // Update comment count on the post
+            const commentLabel = document.querySelector(`.post-card[data-post-id="${activePostId}"] .action-icon-btn:nth-child(2) .action-label`);
+            if (commentLabel) commentLabel.textContent = parseInt(commentLabel.textContent) + 1;
+        } catch (e) {} 
+        finally { btn.disabled = false; btn.textContent = 'Post'; }
+    }
+
+    // ============ SHARE ============
+    async function sharePost(postId) {
         const url = `${window.location.origin}/post/${postId}`;
         if (navigator.share) {
-            try {
-                await navigator.share({ title, text: content, url });
-            } catch (err) {}
+            try { await navigator.share({ url }); } catch (e) {}
         } else {
-            navigator.clipboard.writeText(url).then(() => {
-                showToast('Link copied to clipboard!', 'success');
-            });
+            navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 'success'));
         }
-    }
-
-    // ============ INFINITE SCROLL ============
-    let isLoading = false;
-    let currentPage = 1;
-    let hasMorePosts = true;
-
-    const scrollObserver = new IntersectionObserver(async (entries) => {
-        if (entries[0].isIntersecting && !isLoading && hasMorePosts) {
-            await loadMorePosts();
-        }
-    }, { rootMargin: '300px' });
-
-    const sentinel = document.getElementById('scrollSentinel');
-    if (sentinel) scrollObserver.observe(sentinel);
-
-    async function loadMorePosts() {
-        isLoading = true;
-        currentPage++;
-        
-        try {
-            const response = await fetch(`/api/feed?page=${currentPage}&per_page=10`);
-            const data = await response.json();
-            hasMorePosts = data.has_next;
-            
-            if (data.posts && data.posts.length > 0) {
-                const feedContainer = document.getElementById('feedContainer');
-                data.posts.forEach(post => {
-                    const card = createPostCard(post);
-                    feedContainer.insertBefore(card, sentinel);
-                });
-            }
-        } catch (error) {
-            currentPage--;
-        } finally {
-            isLoading = false;
-        }
-    }
-
-    function createPostCard(post) {
-        const div = document.createElement('div');
-        div.className = 'post-card';
-        div.setAttribute('data-post-id', post.id);
-        
-        let mediaHTML = '';
-        if (post.video) {
-            const videoSrc = post.video.startsWith('http') ? post.video : `/static/uploads/${post.video}`;
-            const posterSrc = post.thumbnail && post.thumbnail.startsWith('http') ? post.thumbnail : (post.thumbnail ? `/static/uploads/${post.thumbnail}` : '');
-            mediaHTML = `
-                <div class="post-media-container">
-                    <video src="${videoSrc}" poster="${posterSrc}" autoplay loop muted playsinline preload="metadata"></video>
-                </div>`;
-        } else if (post.image) {
-            const imgSrc = post.image.startsWith('http') ? post.image : `/static/uploads/${post.image}`;
-            mediaHTML = `<div class="post-media-container"><img src="${imgSrc}" loading="lazy"></div>`;
-        }
-        
-        const avatarSrc = post.author.profile_image && post.author.profile_image.startsWith('http') ? post.author.profile_image : `/static/uploads/${post.author.profile_image}`;
-        
-        div.innerHTML = `
-            ${mediaHTML}
-            <div class="post-body">
-                <div class="post-author">
-                    <a href="/profile/${post.author.username}"><img src="${avatarSrc}" alt="${post.author.username}" onerror="this.src='/static/uploads/default.jpg'"></a>
-                    <div>
-                        <a href="/profile/${post.author.username}" class="username">@${post.author.username}</a>
-                        ${post.category ? `<a href="/search?q=${post.category}" class="post-category">${post.category}</a>` : ''}
-                    </div>
-                </div>
-                <div class="post-content">${escapeHtml(post.content).substring(0, 200)}</div>
-                <div class="post-meta">
-                    <span>${post.created_at}</span>
-                    <span>${post.like_count} likes</span>
-                    <span>${post.comment_count} comments</span>
-                </div>
-            </div>
-            <div class="post-actions">
-                <button class="action-btn like-btn" data-post-id="${post.id}" onclick="handleLike(${post.id}, this)">
-                    <i class="far fa-heart"></i> <span>${post.like_count}</span>
-                </button>
-                <button class="action-btn" onclick="window.location.href='/post/${post.id}'">
-                    <i class="far fa-comment"></i> <span>${post.comment_count}</span>
-                </button>
-                <button class="action-btn" onclick="sharePost(${post.id}, '${escapeHtml(post.title)}', '${escapeHtml(post.content).substring(0, 100)}')">
-                    <i class="far fa-share-square"></i> Share
-                </button>
-            </div>`;
-        return div;
     }
 
     function escapeHtml(str) {
-        if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
