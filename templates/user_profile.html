@@ -242,6 +242,48 @@
         background: var(--accent-hover);
     }
 
+    .btn-call-video {
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-call-video:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+    }
+
+    .btn-call-audio {
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #22c55e;
+        color: white;
+        border: none;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-call-audio:hover {
+        background: #16a34a;
+        transform: translateY(-1px);
+    }
+
     .btn-share {
         width: 36px;
         height: 36px;
@@ -510,6 +552,14 @@
                 <i class="fas fa-comment-dots"></i> Message
             </a>
             
+            <button class="btn-call-audio" onclick="initiateCall('{{ user.username }}', 'audio')" title="Voice Call">
+                <i class="fas fa-phone"></i>
+            </button>
+            
+            <button class="btn-call-video" onclick="initiateCall('{{ user.username }}', 'video')" title="Video Call">
+                <i class="fas fa-video"></i>
+            </button>
+            
             <button class="btn-share" onclick="shareProfile('{{ user.username }}')" title="Share Profile">
                 <i class="fas fa-share-alt"></i>
             </button>
@@ -678,6 +728,7 @@
     <video id="reelVideo" controls autoplay style="max-width: 100%; max-height: 100vh;"></video>
 </div>
 
+<meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
 {% endblock %}
 
 {% block scripts %}
@@ -750,6 +801,29 @@
         if (statNumbers.length > 0) {
             const current = parseInt(statNumbers[0].textContent) || 0;
             statNumbers[0].textContent = Math.max(0, current + delta);
+        }
+    }
+
+    // ============ INITIATE CALL ============
+    async function initiateCall(username, callType) {
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch('/api/call/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                },
+                body: JSON.stringify({ receiver: username, call_type: callType })
+            });
+            const data = await response.json();
+            if (data.room_id) {
+                window.location.href = `/call/${data.call_id}?room=${data.room_id}&type=${callType}`;
+            } else {
+                showToast('Failed to start call', 'error');
+            }
+        } catch (e) {
+            showToast('Could not initiate call', 'error');
         }
     }
 
