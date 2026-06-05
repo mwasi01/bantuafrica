@@ -151,7 +151,7 @@
 
     .media-upload-section:hover {
         border-color: var(--accent);
-        background: rgba(255, 45, 85, 0.03);
+        background: rgba(37, 99, 235, 0.03);
     }
 
     .media-upload-section.has-media {
@@ -275,14 +275,7 @@
         background: var(--accent-hover);
         transform: translateY(-1px);
     }
- // Handle browser back button with unsaved content
-    window.addEventListener('beforeunload', function(e) {
-        if (postContent.value.trim() || selectedFile) {
-            // Modern browsers ignore custom messages, but this triggers the dialog
-            e.preventDefault();
-            e.returnValue = '';
-        }
-    });
+
     .post-submit-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -432,8 +425,8 @@
                 <div class="upload-hint">JPG, PNG, GIF, MP4, MOV, WebM • Max 100MB</div>
             </div>
             
-            <!-- Hidden file inputs -->
-            <input type="file" id="mediaInput" accept="image/*,video/*" 
+            <!-- Hidden file inputs with proper name attributes -->
+            <input type="file" id="mediaInput" name="image" accept="image/*,video/*" 
                    style="display: none;" 
                    onchange="handleMediaSelect(this)">
             
@@ -598,7 +591,7 @@
     mediaUploadZone.addEventListener('dragover', function(e) {
         e.preventDefault();
         this.style.borderColor = 'var(--accent)';
-        this.style.background = 'rgba(255, 45, 85, 0.05)';
+        this.style.background = 'rgba(37, 99, 235, 0.05)';
     });
 
     mediaUploadZone.addEventListener('dragleave', function(e) {
@@ -669,6 +662,7 @@
     }
 
     // ============ FORM SUBMISSION ============
+    let formSubmitted = false;
     const postForm = document.getElementById('postForm');
     const submitBtn = document.getElementById('submitBtn');
     
@@ -680,6 +674,9 @@
             showToast('Please add some content or media to your post.', 'error');
             return false;
         }
+        
+        // Set formSubmitted flag to prevent unsaved changes warning
+        formSubmitted = true;
         
         // Disable button to prevent double submission
         submitBtn.disabled = true;
@@ -694,6 +691,22 @@
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
             postForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+
+    // Handle browser back button with unsaved content
+    window.addEventListener('beforeunload', function(e) {
+        if (!formSubmitted && (postContent.value.trim() || selectedFile)) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Set flag when clicking any navigation link
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
+            formSubmitted = true;
         }
     });
 
@@ -716,28 +729,5 @@
             categoryInput.value = savedCategory;
         }
     });
-// Handle browser back button with unsaved content
-let formSubmitted = false;
-
-window.addEventListener('beforeunload', function(e) {
-    if (!formSubmitted && (postContent.value.trim() || selectedFile)) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
-});
-
-// Set flag when form is being submitted
-postForm.addEventListener('submit', function() {
-    formSubmitted = true;
-});
-
-// Also set flag when clicking any navigation link
-document.addEventListener('click', function(e) {
-    const link = e.target.closest('a');
-    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
-        formSubmitted = true;
-    }
-});
-   
 </script>
 {% endblock %}
