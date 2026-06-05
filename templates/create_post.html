@@ -474,7 +474,7 @@
                     <i class="fas fa-cloud-upload-alt"></i>
                 </div>
                 <div class="upload-text">Add Photos or Videos</div>
-                <div class="upload-hint">JPG, PNG, GIF, MP4, MOV, WebM • Max 100MB</div>
+                <div class="upload-hint">JPG, PNG, GIF, MP4, MOV, WebM, AVI, MKV • Max 100MB</div>
             </div>
             
             <input type="file" id="mediaInput" name="image" accept="image/*,video/*" 
@@ -536,9 +536,10 @@
 {% block scripts %}
 <script>
     /* ============================================================
-       Bantu Africa v2.1 - Create Post Scripts
+       Bantu Africa v2.2 - Create Post Scripts
        Features: Category selection, media upload, draft saving,
-       form validation, keyboard shortcuts, Cloudinary support
+       form validation, keyboard shortcuts, Cloudinary support,
+       All video formats supported (MP4, MOV, WebM, AVI, MKV, etc.)
        ============================================================ */
 
     // ============ CATEGORY SELECTION ============
@@ -591,11 +592,15 @@
             return;
         }
         
-        // Validate file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 
-                            'video/mp4', 'video/quicktime', 'video/webm'];
+        // Validate file type - expanded to match backend ALLOWED_EXTENSIONS
+        const allowedTypes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo',
+            'video/x-matroska', 'video/x-ms-wmv', 'video/x-flv',
+            'video/3gpp', 'video/x-m4v', 'video/ogg', 'video/mpeg'
+        ];
         if (!allowedTypes.includes(file.type)) {
-            showToast('Unsupported file type. Use JPG, PNG, GIF, MP4, MOV, or WebM.', 'error');
+            showToast('Unsupported file type. Use JPG, PNG, GIF, MP4, MOV, WebM, AVI, MKV, etc.', 'error');
             input.value = '';
             return;
         }
