@@ -12,6 +12,53 @@
         background: var(--bg-primary);
     }
 
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
     .create-post-header {
         display: flex;
         align-items: center;
@@ -320,7 +367,7 @@
     /* Responsive */
     @media (max-width: 600px) {
         .create-post-container {
-            padding: 12px 12px 100px;
+            padding: 12px 12px 120px;
         }
         
         .content-textarea {
@@ -350,9 +397,11 @@
 
     <!-- User Info -->
     <div class="user-info-bar">
-        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-             alt="{{ current_user.username }}"
-             onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        {% if current_user.profile_image and current_user.profile_image.startswith('http') %}
+        <img src="{{ current_user.profile_image }}" alt="{{ current_user.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        {% else %}
+        <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" alt="{{ current_user.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        {% endif %}
         <div>
             <div class="username">{{ current_user.username }}</div>
             <div class="visibility">
@@ -459,6 +508,29 @@
     </div>
 </div>
 
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 {% endblock %}
 
 {% block scripts %}
@@ -490,7 +562,6 @@
         }
     });
     
-    // Initialize count
     charCount.textContent = postContent.value.length;
 
     // ============ MEDIA HANDLING ============
@@ -507,14 +578,12 @@
         const file = input.files[0];
         if (!file) return;
         
-        // Validate file size (100MB)
         if (file.size > 100 * 1024 * 1024) {
             showToast('File is too large. Maximum size is 100MB.', 'error');
             input.value = '';
             return;
         }
         
-        // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 
                             'video/mp4', 'video/quicktime', 'video/webm'];
         if (!allowedTypes.includes(file.type)) {
@@ -525,7 +594,6 @@
         
         selectedFile = file;
         
-        // Show progress
         uploadProgress.classList.add('active');
         uploadProgressFill.style.width = '30%';
         
@@ -544,7 +612,6 @@
                 uploadProgress.classList.remove('active');
                 uploadProgressFill.style.width = '0%';
                 
-                // Show preview
                 mediaUploadZone.classList.add('has-media');
                 uploadPlaceholder.style.display = 'none';
                 mediaPreviewContainer.classList.add('active');
@@ -554,7 +621,6 @@
                         <video src="${e.target.result}" controls class="media-preview" id="videoPreview"></video>
                     `;
                     
-                    // Get video duration
                     const video = document.getElementById('videoPreview');
                     video.onloadedmetadata = function() {
                         const duration = Math.round(video.duration);
@@ -634,15 +700,13 @@
             timestamp: new Date().toISOString()
         };
         
-        // Save to localStorage
         const drafts = JSON.parse(localStorage.getItem('bantu_drafts') || '[]');
         drafts.unshift(draft);
-        localStorage.setItem('bantu_drafts', JSON.stringify(drafts.slice(0, 10))); // Keep last 10
+        localStorage.setItem('bantu_drafts', JSON.stringify(drafts.slice(0, 10)));
         
         showToast('Draft saved!', 'success');
     }
 
-    // Load draft if exists
     function loadLastDraft() {
         const drafts = JSON.parse(localStorage.getItem('bantu_drafts') || '[]');
         if (drafts.length > 0 && !postContent.value) {
@@ -675,10 +739,7 @@
             return false;
         }
         
-        // Set formSubmitted flag to prevent unsaved changes warning
         formSubmitted = true;
-        
-        // Disable button to prevent double submission
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
         
@@ -687,7 +748,6 @@
 
     // ============ KEYBOARD SHORTCUTS ============
     document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + Enter to submit
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
             postForm.dispatchEvent(new Event('submit', { cancelable: true }));
@@ -702,7 +762,6 @@
         }
     });
 
-    // Set flag when clicking any navigation link
     document.addEventListener('click', function(e) {
         const link = e.target.closest('a');
         if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('#')) {
@@ -713,11 +772,8 @@
     // ============ INITIALIZATION ============
     document.addEventListener('DOMContentLoaded', function() {
         loadLastDraft();
-        
-        // Focus textarea
         postContent.focus();
         
-        // If returning from error, restore category
         const savedCategory = '{{ request.form.get("category", "general") }}';
         if (savedCategory && savedCategory !== 'general') {
             categoryChips.forEach(chip => {
