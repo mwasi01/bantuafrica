@@ -240,7 +240,7 @@ class SavedPost(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='unique_save'),)
     
-    user = db.relationship('User', foreign_keys=[user_id])
+    user = db.relationship('User', foreign_keys=[user_id], overlaps='saved_posts,saver')
 
 class Repost(db.Model):
     """Tracks reposts of posts"""
@@ -250,7 +250,7 @@ class Repost(db.Model):
     reposted_post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    user = db.relationship('User', foreign_keys=[user_id])
+    user = db.relationship('User', foreign_keys=[user_id], overlaps='reposter,reposts')
     original_post = db.relationship('Post', foreign_keys=[original_post_id])
     reposted_post = db.relationship('Post', foreign_keys=[reposted_post_id])
 
@@ -840,6 +840,38 @@ def repost_count(post_id):
     return jsonify({'count': count})
 
 # ============ CALL ROUTES (WebRTC Signaling) ============
+
+@app.route('/call/<int:call_id>')
+@login_required
+def call_page(call_id):
+    """Render the call interface page"""
+    call = Call.query.get_or_404(call_id)
+    
+    # Only allow caller or receiver to access
+    if current_user.id not in [call.caller_id, call.receiver_id]:
+        flash('You are not part of this call.', 'danger')
+        return redirect(url_for('messages'))
+    
+    other_user = call.receiver if call.caller_id == current_user.id else call.caller
+    room_id = request.args.get('room', call.room_id)
+    call_type = request.args.get('type', call.call_type)
+    is_incoming = call.receiver_id == current_user.id and call.status == 'pending'
+    
+    return render_template('call.html',
+                         other_user=other_user,
+                         call_id=call.id,
+                         room_id=room_id,
+                         call_type=call_type,
+                         is_incoming=is_incoming,
+                         turn_server=os.environ.get('TURN_SERVER_URL', ''),
+                         turn_username=os.environ.get('TURN_SERVER_USERNAME', ''),
+                         turn_credential=os.environ.get('TURN_SERVER_CREDENTIAL', ''))
+
+@app.route('/calls')
+@login_required
+def calls_history_page():
+    """Render the call history page"""
+    return render_template('calls_history.html')
 
 @app.route('/api/call/initiate', methods=['POST'])
 @login_required
