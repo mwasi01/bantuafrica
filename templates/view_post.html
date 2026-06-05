@@ -12,6 +12,53 @@
         padding-bottom: 80px;
     }
 
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
     /* Post Header */
     .post-detail-header {
         padding: 12px 16px;
@@ -271,7 +318,7 @@
     }
 
     .action-item.liked {
-        color: var(--accent);
+        color: #ef4444;
     }
 
     .action-item.liked i {
@@ -512,12 +559,12 @@
 
     /* Delete button */
     .delete-btn {
-        color: var(--accent) !important;
+        color: #ef4444 !important;
     }
 
     .delete-btn:hover {
-        background: rgba(255, 45, 85, 0.1) !important;
-        color: var(--accent) !important;
+        background: rgba(239, 68, 68, 0.1) !important;
+        color: #ef4444 !important;
     }
 
     @media (max-width: 480px) {
@@ -532,6 +579,10 @@
         
         .related-posts-grid {
             grid-template-columns: 1fr;
+        }
+
+        .post-detail-container {
+            padding-bottom: 90px;
         }
     }
 </style>
@@ -559,13 +610,15 @@
     {% if post.video or post.image %}
     <div class="post-media-container {% if post.video %}paused{% endif %}" id="mediaContainer" {% if post.video %}onclick="toggleVideo()"{% endif %}>
         {% if post.video %}
-        <video 
-            src="{{ url_for('static', filename='uploads/' + post.video) }}"
-            poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
-            id="postVideo"
-            preload="metadata"
-            playsinline
-        ></video>
+            {% if post.video.startswith('http') %}
+            <video src="{{ post.video }}"
+                   poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"
+                   id="postVideo" preload="metadata" playsinline></video>
+            {% else %}
+            <video src="{{ url_for('static', filename='uploads/' + post.video) }}"
+                   poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
+                   id="postVideo" preload="metadata" playsinline></video>
+            {% endif %}
         <div class="video-play-overlay">
             <i class="fas fa-play-circle"></i>
         </div>
@@ -582,9 +635,11 @@
             </button>
         </div>
         {% elif post.image %}
-        <img src="{{ url_for('static', filename='uploads/' + post.image) }}" 
-             alt="{{ post.title }}"
-             ondblclick="doubleTapLike()">
+            {% if post.image.startswith('http') %}
+            <img src="{{ post.image }}" alt="{{ post.title }}" ondblclick="doubleTapLike()">
+            {% else %}
+            <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="{{ post.title }}" ondblclick="doubleTapLike()">
+            {% endif %}
         {% endif %}
     </div>
     {% endif %}
@@ -594,10 +649,11 @@
         <!-- Author Row -->
         <div class="post-author-row">
             <a href="{{ url_for('user_profile', username=post.author.username) }}">
-                <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" 
-                     alt="{{ post.author.username }}"
-                     class="post-author-avatar"
-                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% if post.author.profile_image and post.author.profile_image.startswith('http') %}
+                <img src="{{ post.author.profile_image }}" alt="{{ post.author.username }}" class="post-author-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" alt="{{ post.author.username }}" class="post-author-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% endif %}
             </a>
             <div class="post-author-info">
                 <a href="{{ url_for('user_profile', username=post.author.username) }}" 
@@ -670,10 +726,11 @@
                 {% for comment in post.comments|sort(attribute='created_at', reverse=True) %}
                 <div class="comment-card" id="comment-{{ comment.id }}">
                     <a href="{{ url_for('user_profile', username=comment.author.username) }}">
-                        <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_image) }}" 
-                             alt="{{ comment.author.username }}"
-                             class="comment-avatar"
-                             onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        {% if comment.author.profile_image and comment.author.profile_image.startswith('http') %}
+                        <img src="{{ comment.author.profile_image }}" alt="{{ comment.author.username }}" class="comment-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        {% else %}
+                        <img src="{{ url_for('static', filename='uploads/' + comment.author.profile_image) }}" alt="{{ comment.author.username }}" class="comment-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        {% endif %}
                     </a>
                     <div class="comment-body">
                         <div class="comment-author">
@@ -689,7 +746,7 @@
                                 <i class="far fa-comment-dots"></i> Reply
                             </button>
                             {% if comment.author == current_user %}
-                            <button class="comment-action-btn" onclick="deleteComment({{ comment.id }})" style="color: var(--accent);">
+                            <button class="comment-action-btn" onclick="deleteComment({{ comment.id }})" style="color: #ef4444;">
                                 <i class="far fa-trash-alt"></i> Delete
                             </button>
                             {% endif %}
@@ -709,10 +766,11 @@
     <!-- Comment Input -->
     <div class="comment-input-section">
         <div class="comment-input-wrapper">
-            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
-                 alt="{{ current_user.username }}"
-                 class="comment-input-avatar"
-                 onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            {% if current_user.profile_image and current_user.profile_image.startswith('http') %}
+            <img src="{{ current_user.profile_image }}" alt="{{ current_user.username }}" class="comment-input-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            {% else %}
+            <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" alt="{{ current_user.username }}" class="comment-input-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            {% endif %}
             <input type="text" 
                    class="comment-input" 
                    placeholder="Add a comment..." 
@@ -741,10 +799,33 @@
     {% endif %}
 </div>
 
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
     <div style="background: var(--bg-secondary); border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; text-align: center;">
-        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: var(--accent); margin-bottom: 12px;"></i>
+        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ef4444; margin-bottom: 12px;"></i>
         <h3 style="margin-bottom: 8px;">Delete Post?</h3>
         <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
             This action cannot be undone. This post will be permanently deleted.
@@ -755,7 +836,7 @@
                 Cancel
             </button>
             <a href="{{ url_for('delete_post', post_id=post.id) }}" 
-               style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center;">
+               style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ef4444; color: white; font-weight: 600; cursor: pointer; text-decoration: none; text-align: center;">
                 Delete
             </a>
         </div>
@@ -839,7 +920,6 @@
         const countSpan = document.getElementById('likeCount');
         let currentCount = parseInt(countSpan.textContent) || 0;
 
-        // Optimistic update
         if (wasLiked) {
             button.classList.remove('liked');
             icon.className = 'far fa-heart';
@@ -872,7 +952,6 @@
             countSpan.textContent = data.like_count;
             
         } catch (error) {
-            // Revert
             if (wasLiked) {
                 button.classList.add('liked');
                 icon.className = 'fas fa-heart';
@@ -914,7 +993,6 @@
             const data = await response.json();
 
             if (data.success) {
-                // Add comment to list
                 const commentsList = document.getElementById('commentsList');
                 const noComments = commentsList.querySelector('.no-comments');
                 if (noComments) noComments.remove();
@@ -947,13 +1025,11 @@
                 commentSubmitBtn.disabled = true;
                 commentSubmitBtn.textContent = 'Post';
 
-                // Update comment count
                 const countSpan = document.querySelector('.action-item:nth-child(2) .action-count');
                 if (countSpan) {
                     countSpan.textContent = data.comment_count;
                 }
 
-                // Update header count
                 const headerCount = document.querySelector('.comments-header');
                 if (headerCount) {
                     headerCount.innerHTML = `<i class="far fa-comments"></i> Comments (${data.comment_count})`;
