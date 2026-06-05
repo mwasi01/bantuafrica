@@ -9,3 +9,4 @@ flask-limiter
 Pillow
 gunicorn
 psycopg2-binary
+eventlet
