@@ -4,7 +4,9 @@
 
 {% block content %}
 <style>
-    /* ============ TIKTOK-STYLE FEED ============ */
+    /* ============================================================
+       TIKTOK-STYLE VERTICAL FEED
+       ============================================================ */
     .feed-wrapper {
         height: 100vh;
         height: 100dvh;
@@ -15,8 +17,11 @@
         background: #000;
     }
 
-    .feed-wrapper::-webkit-scrollbar { display: none; }
+    .feed-wrapper::-webkit-scrollbar {
+        display: none;
+    }
 
+    /* Each post is a full-screen snap card */
     .post-card {
         height: 100vh;
         height: 100dvh;
@@ -29,7 +34,7 @@
         overflow: hidden;
     }
 
-    /* Media Container */
+    /* ============ MEDIA CONTAINER ============ */
     .post-media-wrap {
         width: 100%;
         height: 100%;
@@ -46,7 +51,7 @@
         object-fit: contain;
     }
 
-    /* Tap to pause overlay */
+    /* ============ PAUSE OVERLAY ============ */
     .pause-overlay {
         position: absolute;
         inset: 0;
@@ -64,21 +69,27 @@
 
     .pause-overlay i {
         font-size: 70px;
-        color: rgba(255,255,255,0.8);
-        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+        color: rgba(255, 255, 255, 0.8);
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
         animation: fadePause 0.6s ease-out forwards;
     }
 
     @keyframes fadePause {
-        0% { transform: scale(0.5); opacity: 1; }
-        100% { transform: scale(1.2); opacity: 0; }
+        0% {
+            transform: scale(0.5);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1.2);
+            opacity: 0;
+        }
     }
 
-    /* Right Side Actions */
+    /* ============ RIGHT SIDE ACTIONS ============ */
     .post-actions-sidebar {
         position: absolute;
         right: 12px;
-        bottom: 140px;
+        bottom: 190px;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -105,8 +116,8 @@
     }
 
     .action-icon-btn i {
-        font-size: 32px;
-        filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+        font-size: 30px;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
         transition: color 0.15s;
     }
 
@@ -114,20 +125,28 @@
         color: #ef4444;
     }
 
-    .action-icon-btn .action-label {
-        font-size: 11px;
-        font-weight: 700;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    .action-icon-btn.saved i {
+        color: #f59e0b;
     }
 
-    /* Bottom Info Section */
+    .action-icon-btn.reposted i {
+        color: #22c55e;
+    }
+
+    .action-icon-btn .action-label {
+        font-size: 10px;
+        font-weight: 700;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* ============ BOTTOM INFO SECTION ============ */
     .post-info-bottom {
         position: absolute;
         bottom: 0;
         left: 0;
-        right: 80px;
+        right: 70px;
         padding: 20px 16px 100px;
-        background: linear-gradient(transparent, rgba(0,0,0,0.85));
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
         z-index: 5;
         pointer-events: none;
     }
@@ -148,20 +167,20 @@
         height: 40px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid rgba(255,255,255,0.5);
+        border: 2px solid rgba(255, 255, 255, 0.5);
     }
 
     .post-author-row .username {
         color: white;
         font-weight: 700;
         font-size: 15px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         text-decoration: none;
     }
 
     .follow-btn-small {
         background: transparent;
-        border: 1px solid rgba(255,255,255,0.8);
+        border: 1px solid rgba(255, 255, 255, 0.8);
         color: white;
         padding: 4px 14px;
         border-radius: 20px;
@@ -169,7 +188,7 @@
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .follow-btn-small.following {
@@ -183,11 +202,11 @@
         font-size: 14px;
         line-height: 1.4;
         margin-bottom: 6px;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .caption-expand {
-        color: rgba(255,255,255,0.7);
+        color: rgba(255, 255, 255, 0.7);
         font-size: 13px;
         cursor: pointer;
         font-weight: 600;
@@ -204,7 +223,7 @@
     }
 
     .post-category-tag {
-        background: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.2);
         color: white;
         padding: 3px 10px;
         border-radius: 10px;
@@ -215,7 +234,7 @@
     }
 
     .post-time {
-        color: rgba(255,255,255,0.7);
+        color: rgba(255, 255, 255, 0.7);
         font-size: 11px;
     }
 
@@ -233,15 +252,17 @@
     }
 
     @keyframes spin {
-        to { transform: rotate(360deg); }
+        to {
+            transform: rotate(360deg);
+        }
     }
 
-    /* Audio Toggle */
+    /* ============ AUDIO TOGGLE ============ */
     .audio-toggle {
         position: absolute;
         top: 16px;
         right: 16px;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         width: 36px;
         height: 36px;
@@ -258,10 +279,10 @@
     }
 
     .audio-toggle:hover {
-        background: rgba(0,0,0,0.7);
+        background: rgba(0, 0, 0, 0.7);
     }
 
-    /* Comments Panel */
+    /* ============ COMMENTS PANEL ============ */
     .comments-panel {
         position: fixed;
         bottom: 0;
@@ -274,7 +295,7 @@
         overflow-y: auto;
         transform: translateY(100%);
         transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
     }
 
     .comments-panel.open {
@@ -384,11 +405,11 @@
         cursor: pointer;
     }
 
-    /* Overlay backdrop */
+    /* ============ COMMENTS BACKDROP ============ */
     .comments-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.5);
+        background: rgba(0, 0, 0, 0.5);
         z-index: 99;
         opacity: 0;
         pointer-events: none;
@@ -400,7 +421,7 @@
         pointer-events: auto;
     }
 
-    /* Heart burst animation */
+    /* ============ HEART BURST ANIMATION ============ */
     .heart-burst {
         position: fixed;
         pointer-events: none;
@@ -412,12 +433,21 @@
     }
 
     @keyframes heartBurst {
-        0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
-        50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
-        100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+        0% {
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 1;
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.3);
+            opacity: 0.8;
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0;
+        }
     }
 
-    /* Empty feed */
+    /* ============ EMPTY FEED ============ */
     .empty-feed {
         height: 100vh;
         display: flex;
@@ -457,15 +487,15 @@
         font-weight: 600;
     }
 
-    /* Mobile Navigation */
+    /* ============ MOBILE NAVIGATION ============ */
     .mobile-nav {
         display: flex;
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
-        background: rgba(0,0,0,0.9);
-        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0, 0, 0, 0.9);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
         padding: 8px 0 var(--safe-bottom, 20px);
         z-index: 50;
         justify-content: space-around;
@@ -473,7 +503,9 @@
     }
 
     @media (min-width: 992px) {
-        .mobile-nav { display: none; }
+        .mobile-nav {
+            display: none;
+        }
     }
 
     .mobile-nav-item {
@@ -481,15 +513,20 @@
         flex-direction: column;
         align-items: center;
         gap: 4px;
-        color: rgba(255,255,255,0.6);
+        color: rgba(255, 255, 255, 0.6);
         font-size: 10px;
         text-decoration: none;
         transition: color 0.2s;
         padding: 4px 12px;
     }
 
-    .mobile-nav-item.active { color: white; }
-    .mobile-nav-item i { font-size: 20px; }
+    .mobile-nav-item.active {
+        color: white;
+    }
+
+    .mobile-nav-item i {
+        font-size: 20px;
+    }
 
     .mobile-nav-item.create-btn {
         background: var(--accent);
@@ -505,25 +542,24 @@
     }
 </style>
 
+<!-- ============ FEED CONTAINER ============ -->
 <div class="feed-wrapper" id="feedWrapper">
     {% if posts %}
         {% for post in posts %}
         <div class="post-card" data-post-id="{{ post.id }}" id="post{{ post.id }}">
-            <!-- Media -->
+            <!-- Media Display -->
             <div class="post-media-wrap" ondblclick="doubleTapLike({{ post.id }}, event)">
                 {% if post.video %}
                     {% if post.video.startswith('http') %}
                     <video src="{{ post.video }}"
                            poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"
                            loop playsinline preload="metadata"
-                           id="video{{ post.id }}"
-                           muted></video>
+                           id="video{{ post.id }}" muted></video>
                     {% else %}
                     <video src="{{ url_for('static', filename='uploads/' + post.video) }}"
                            poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
                            loop playsinline preload="metadata"
-                           id="video{{ post.id }}"
-                           muted></video>
+                           id="video{{ post.id }}" muted></video>
                     {% endif %}
                     <button class="audio-toggle" id="audioBtn{{ post.id }}" onclick="toggleAudio({{ post.id }})" title="Unmute">
                         <i class="fas fa-volume-mute"></i>
@@ -540,30 +576,46 @@
                 </div>
             </div>
 
-            <!-- Right Side Actions -->
+            <!-- Right Side Action Buttons -->
             <div class="post-actions-sidebar">
+                <!-- Like Button -->
                 <button class="action-icon-btn like-btn" data-post-id="{{ post.id }}" onclick="handleLike({{ post.id }}, this)">
                     <i class="far fa-heart"></i>
                     <span class="action-label">{{ post.like_count() }}</span>
                 </button>
                 
+                <!-- Comment Button -->
                 <button class="action-icon-btn" onclick="openComments({{ post.id }})">
                     <i class="far fa-comment"></i>
                     <span class="action-label">{{ post.comment_count() }}</span>
                 </button>
                 
+                <!-- Repost Button -->
+                <button class="action-icon-btn repost-btn" data-post-id="{{ post.id }}" onclick="repostPost({{ post.id }}, this)">
+                    <i class="fas fa-retweet"></i>
+                    <span class="action-label">Repost</span>
+                </button>
+                
+                <!-- Save Button -->
+                <button class="action-icon-btn save-btn" data-post-id="{{ post.id }}" onclick="toggleSave({{ post.id }}, this)">
+                    <i class="far fa-bookmark"></i>
+                    <span class="action-label">Save</span>
+                </button>
+                
+                <!-- Share Button -->
                 <button class="action-icon-btn" onclick="sharePost('{{ post.id }}')">
                     <i class="fas fa-share"></i>
                     <span class="action-label">Share</span>
                 </button>
                 
-                <button class="action-icon-btn">
-                    <i class="far fa-bookmark"></i>
-                    <span class="action-label">Save</span>
+                <!-- Download Button -->
+                <button class="action-icon-btn" onclick="downloadMedia('{{ post.id }}')">
+                    <i class="fas fa-download"></i>
+                    <span class="action-label">Download</span>
                 </button>
             </div>
 
-            <!-- Bottom Info -->
+            <!-- Bottom Info Overlay -->
             <div class="post-info-bottom">
                 <div class="post-author-row">
                     <a href="{{ url_for('user_profile', username=post.author.username) }}">
@@ -606,15 +658,17 @@
     {% endif %}
 </div>
 
-<!-- Comments Panel -->
+<!-- ============ COMMENTS PANEL ============ -->
 <div class="comments-backdrop" id="commentsBackdrop" onclick="closeComments()"></div>
 <div class="comments-panel" id="commentsPanel">
     <div class="comments-panel-header">
         <h4>Comments</h4>
-        <button class="comments-panel-close" onclick="closeComments()"><i class="fas fa-times"></i></button>
+        <button class="comments-panel-close" onclick="closeComments()">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
     <div class="comments-panel-body" id="commentsPanelBody">
-        <p style="text-align:center;color:var(--text-secondary);">Loading comments...</p>
+        <p style="text-align: center; color: var(--text-secondary); padding: 20px;">Loading comments...</p>
     </div>
     <div class="comments-input-area">
         <input type="text" class="comments-input" id="commentInput" placeholder="Add a comment...">
@@ -622,7 +676,7 @@
     </div>
 </div>
 
-<!-- Mobile Bottom Navigation -->
+<!-- ============ MOBILE BOTTOM NAVIGATION ============ -->
 <nav class="mobile-nav">
     <a href="{{ url_for('home') }}" class="mobile-nav-item active">
         <i class="fas fa-home"></i>
@@ -654,6 +708,12 @@
 
 {% block scripts %}
 <script>
+    /* ============================================================
+       TIKTOK-STYLE FEED JAVASCRIPT
+       Features: Video autoplay, double-tap like, comments panel,
+       save, repost, download, share, audio toggle
+       ============================================================ */
+
     let activePostId = null;
 
     // ============ VIDEO AUTOPLAY ON SCROLL ============
@@ -666,7 +726,9 @@
                 video.pause();
             }
         });
-    }, { threshold: [0, 0.6, 1] });
+    }, {
+        threshold: [0, 0.6, 1]
+    });
 
     document.querySelectorAll('video').forEach(v => videoObserver.observe(v));
 
@@ -675,7 +737,7 @@
         const video = document.getElementById('video' + postId);
         const btn = document.getElementById('audioBtn' + postId);
         if (!video) return;
-        
+
         video.muted = !video.muted;
         const icon = btn.querySelector('i');
         if (video.muted) {
@@ -706,13 +768,14 @@
         setTimeout(() => heart.remove(), 800);
     }
 
-    // ============ LIKE ============
+    // ============ LIKE HANDLER ============
     async function handleLike(postId, button) {
         const wasLiked = button.classList.contains('liked');
         const icon = button.querySelector('i');
         const label = button.querySelector('.action-label');
         let count = parseInt(label.textContent) || 0;
 
+        // Optimistic update
         if (wasLiked) {
             button.classList.remove('liked');
             icon.className = 'far fa-heart';
@@ -727,14 +790,28 @@
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             const response = await fetch(`/api/post/${postId}/like`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                }
             });
             const data = await response.json();
             label.textContent = data.like_count;
-        } catch (e) {}
+        } catch (e) {
+            // Revert on failure
+            if (wasLiked) {
+                button.classList.add('liked');
+                icon.className = 'fas fa-heart';
+                label.textContent = count;
+            } else {
+                button.classList.remove('liked');
+                icon.className = 'far fa-heart';
+                label.textContent = count;
+            }
+        }
     }
 
-    // ============ FOLLOW ============
+    // ============ FOLLOW TOGGLE ============
     async function toggleFollow(username, button) {
         const isFollowing = button.classList.contains('following');
         if (isFollowing) {
@@ -753,7 +830,146 @@
         } catch (e) {}
     }
 
-    // ============ CAPTION EXPAND ============
+    // ============ SAVE/BOOKMARK ============
+    async function toggleSave(postId, button) {
+        const icon = button.querySelector('i');
+        const label = button.querySelector('.action-label');
+        const isSaved = button.classList.contains('saved');
+
+        // Optimistic update
+        if (isSaved) {
+            button.classList.remove('saved');
+            icon.className = 'far fa-bookmark';
+            label.textContent = 'Save';
+        } else {
+            button.classList.add('saved');
+            icon.className = 'fas fa-bookmark';
+            label.textContent = 'Saved';
+        }
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch(`/api/post/${postId}/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                }
+            });
+            const data = await response.json();
+
+            if (data.saved) {
+                button.classList.add('saved');
+                icon.className = 'fas fa-bookmark';
+                label.textContent = 'Saved';
+                showToast('Post saved!', 'success');
+            } else {
+                button.classList.remove('saved');
+                icon.className = 'far fa-bookmark';
+                label.textContent = 'Save';
+                showToast('Removed from saved', 'info');
+            }
+        } catch (e) {
+            // Revert on failure
+            if (isSaved) {
+                button.classList.add('saved');
+                icon.className = 'fas fa-bookmark';
+                label.textContent = 'Saved';
+            }
+        }
+    }
+
+    // ============ REPOST ============
+    async function repostPost(postId, button) {
+        const label = button.querySelector('.action-label');
+        const originalText = label.textContent;
+        label.textContent = '...';
+        button.disabled = true;
+
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch(`/api/post/${postId}/repost`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                button.classList.add('reposted');
+                button.querySelector('i').className = 'fas fa-retweet';
+                label.textContent = 'Reposted';
+                showToast('Reposted to your feed!', 'success');
+            } else {
+                showToast(data.error || 'Failed to repost', 'error');
+            }
+        } catch (e) {
+            showToast('Failed to repost', 'error');
+        }
+
+        label.textContent = originalText;
+        button.disabled = false;
+    }
+
+    // ============ DOWNLOAD MEDIA ============
+    async function downloadMedia(postId) {
+        const card = document.getElementById('post' + postId) || 
+                     document.querySelector(`.post-card[data-post-id="${postId}"]`);
+        if (!card) {
+            showToast('Post not found', 'error');
+            return;
+        }
+
+        const video = card.querySelector('video');
+        const img = card.querySelector('img');
+        let url, ext;
+
+        if (video) {
+            url = video.src;
+            ext = 'mp4';
+        } else if (img) {
+            url = img.src;
+            ext = 'jpg';
+        } else {
+            showToast('Nothing to download', 'error');
+            return;
+        }
+
+        showToast('Downloading...', 'success');
+
+        try {
+            // For Cloudinary URLs, open directly
+            if (url.includes('cloudinary.com') || url.includes('res.cloudinary.com')) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bantu_${postId}_${Date.now()}.${ext}`;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                return;
+            }
+
+            // For local files, fetch and download
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = `bantu_${postId}_${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        } catch (e) {
+            window.open(url, '_blank');
+        }
+    }
+
+    // ============ CAPTION EXPAND/COLLAPSE ============
     function expandCaption(postId) {
         const caption = document.getElementById('caption' + postId);
         caption.querySelector('.caption-text-truncated').style.display = 'none';
@@ -784,38 +1000,39 @@
 
     async function loadComments(postId) {
         const body = document.getElementById('commentsPanelBody');
-        body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);">Loading comments...</p>';
+        body.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Loading comments...</p>';
+
         try {
             const response = await fetch(`/post/${postId}`);
             const html = await response.text();
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const comments = doc.querySelectorAll('.comment-card');
-            
+
             if (comments.length === 0) {
-                body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);padding:20px;">No comments yet. Be the first!</p>';
+                body.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">No comments yet. Be the first!</p>';
                 return;
             }
-            
+
             body.innerHTML = '';
             comments.forEach(c => {
                 const avatar = c.querySelector('.comment-avatar')?.src || '/static/uploads/default.jpg';
                 const author = c.querySelector('.comment-author')?.textContent?.trim() || 'User';
                 const text = c.querySelector('.comment-text')?.textContent?.trim() || '';
                 const time = c.querySelector('.comment-time')?.textContent?.trim() || '';
-                
+
                 body.innerHTML += `
                     <div class="comment-item">
                         <img src="${avatar}" onerror="this.src='/static/uploads/default.jpg'">
                         <div class="comment-content">
-                            <div class="comment-author">${author}</div>
+                            <div class="comment-author">${escapeHtml(author)}</div>
                             <div class="comment-text">${escapeHtml(text)}</div>
                             <div class="comment-time">${time}</div>
                         </div>
                     </div>`;
             });
         } catch (e) {
-            body.innerHTML = '<p style="text-align:center;color:var(--text-secondary);">Could not load comments.</p>';
+            body.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Could not load comments.</p>';
         }
     }
 
@@ -832,29 +1049,49 @@
             const csrfMeta = document.querySelector('meta[name="csrf-token"]');
             await fetch(`/api/post/${activePostId}/comment`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : '' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                },
                 body: JSON.stringify({ content })
             });
             input.value = '';
             loadComments(activePostId);
-            // Update comment count on the post
-            const commentLabel = document.querySelector(`.post-card[data-post-id="${activePostId}"] .action-icon-btn:nth-child(2) .action-label`);
-            if (commentLabel) commentLabel.textContent = parseInt(commentLabel.textContent) + 1;
-        } catch (e) {} 
-        finally { btn.disabled = false; btn.textContent = 'Post'; }
-    }
 
-    // ============ SHARE ============
-    async function sharePost(postId) {
-        const url = `${window.location.origin}/post/${postId}`;
-        if (navigator.share) {
-            try { await navigator.share({ url }); } catch (e) {}
-        } else {
-            navigator.clipboard.writeText(url).then(() => showToast('Link copied!', 'success'));
+            // Update comment count on the post
+            const commentLabel = document.querySelector(
+                `.post-card[data-post-id="${activePostId}"] .action-icon-btn:nth-child(2) .action-label`
+            );
+            if (commentLabel) {
+                commentLabel.textContent = parseInt(commentLabel.textContent) + 1;
+            }
+        } catch (e) {
+            // Silent fail
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Post';
         }
     }
 
+    // ============ SHARE POST ============
+    async function sharePost(postId) {
+        const url = `${window.location.origin}/post/${postId}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({ url });
+            } catch (e) {
+                // User cancelled
+            }
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Link copied!', 'success');
+            });
+        }
+    }
+
+    // ============ UTILITY ============
     function escapeHtml(str) {
+        if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;
