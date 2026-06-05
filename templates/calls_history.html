@@ -1,0 +1,627 @@
+{% extends "base.html" %}
+
+{% block title %}Call History | Bantu Africa{% endblock %}
+
+{% block content %}
+<style>
+    .calls-container {
+        max-width: 650px;
+        margin: 0 auto;
+        min-height: 100vh;
+        background: var(--bg-primary);
+        padding-bottom: 80px;
+    }
+
+    /* Header */
+    .calls-header {
+        padding: 16px 20px;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .calls-header h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .calls-header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .header-action-btn {
+        background: none;
+        border: none;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 8px;
+        transition: background 0.2s;
+    }
+
+    .header-action-btn:hover {
+        background: var(--bg-card);
+    }
+
+    /* Filter Tabs */
+    .calls-tabs {
+        display: flex;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-primary);
+    }
+
+    .calls-tab {
+        flex: 1;
+        text-align: center;
+        padding: 12px 0;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+        background: none;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+    }
+
+    .calls-tab:hover {
+        color: var(--text-primary);
+    }
+
+    .calls-tab.active {
+        color: var(--text-primary);
+        border-bottom-color: var(--accent);
+    }
+
+    .calls-tab .count {
+        font-size: 10px;
+        background: var(--bg-card);
+        padding: 1px 7px;
+        border-radius: 10px;
+        margin-left: 4px;
+    }
+
+    /* Call List */
+    .calls-list {
+        padding: 0;
+    }
+
+    .call-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .call-item:hover {
+        background: var(--bg-card);
+    }
+
+    .call-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .call-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .call-type-icon {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        border: 2px solid white;
+    }
+
+    .call-type-icon.video {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .call-type-icon.audio {
+        background: #22c55e;
+        color: white;
+    }
+
+    .call-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .call-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--text-primary);
+        margin-bottom: 2px;
+    }
+
+    .call-details {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+    }
+
+    .call-direction {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .call-direction.incoming {
+        color: #22c55e;
+    }
+
+    .call-direction.outgoing {
+        color: #3b82f6;
+    }
+
+    .call-direction.missed {
+        color: #ef4444;
+    }
+
+    .call-status-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .call-status-badge.ended {
+        background: #f1f5f9;
+        color: var(--text-secondary);
+    }
+
+    .call-status-badge.missed {
+        background: #fef2f2;
+        color: #ef4444;
+    }
+
+    .call-status-badge.active {
+        background: #f0fdf4;
+        color: #22c55e;
+    }
+
+    .call-time {
+        font-size: 12px;
+        color: var(--text-secondary);
+        white-space: nowrap;
+    }
+
+    /* Quick Action Buttons */
+    .call-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .quick-call-btn {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .quick-call-btn.video-call {
+        background: #eff6ff;
+        color: #3b82f6;
+    }
+
+    .quick-call-btn.video-call:hover {
+        background: #3b82f6;
+        color: white;
+    }
+
+    .quick-call-btn.audio-call {
+        background: #f0fdf4;
+        color: #22c55e;
+    }
+
+    .quick-call-btn.audio-call:hover {
+        background: #22c55e;
+        color: white;
+    }
+
+    .quick-call-btn.message {
+        background: #f8fafc;
+        color: var(--text-secondary);
+    }
+
+    .quick-call-btn.message:hover {
+        background: var(--accent);
+        color: white;
+    }
+
+    /* Empty State */
+    .empty-calls {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-secondary);
+    }
+
+    .empty-calls i {
+        font-size: 56px;
+        opacity: 0.3;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .empty-calls h3 {
+        font-size: 18px;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+
+    .empty-calls p {
+        font-size: 14px;
+        max-width: 300px;
+        margin: 0 auto 20px;
+    }
+
+    .empty-calls .start-call-btn {
+        display: inline-block;
+        background: var(--accent);
+        color: white;
+        padding: 10px 24px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    /* Loading */
+    .loading-calls {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .loading-calls i {
+        font-size: 30px;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    @media (max-width: 480px) {
+        .calls-container {
+            padding-bottom: 90px;
+        }
+    }
+</style>
+
+<div class="calls-container">
+    <!-- Header -->
+    <div class="calls-header">
+        <h3><i class="fas fa-phone-alt"></i> Call History</h3>
+        <div class="calls-header-actions">
+            <button class="header-action-btn" onclick="clearHistory()" title="Clear all">
+                <i class="fas fa-trash-alt"></i> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="calls-tabs">
+        <button class="calls-tab active" data-tab="all" onclick="filterCalls('all', this)">
+            All
+        </button>
+        <button class="calls-tab" data-tab="missed" onclick="filterCalls('missed', this)">
+            Missed <span class="count" id="missedCount">0</span>
+        </button>
+        <button class="calls-tab" data-tab="video" onclick="filterCalls('video', this)">
+            Video
+        </button>
+        <button class="calls-tab" data-tab="audio" onclick="filterCalls('audio', this)">
+            Audio
+        </button>
+    </div>
+
+    <!-- Call List -->
+    <div class="calls-list" id="callsList">
+        <div class="loading-calls">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p style="margin-top: 12px;">Loading call history...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('notifications') }}" class="mobile-nav-item">
+        <i class="fas fa-bell"></i>
+        <span>Alerts</span>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
+<meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allCalls = [];
+
+    // ============ LOAD CALL HISTORY ============
+    async function loadCallHistory() {
+        try {
+            const response = await fetch('/api/calls/history');
+            const data = await response.json();
+
+            if (data.calls && data.calls.length > 0) {
+                allCalls = data.calls;
+                renderCalls(allCalls);
+                updateMissedCount();
+            } else {
+                document.getElementById('callsList').innerHTML = `
+                    <div class="empty-calls">
+                        <i class="fas fa-phone-slash"></i>
+                        <h3>No Call History</h3>
+                        <p>Your voice and video calls will appear here</p>
+                        <a href="{{ url_for('messages') }}" class="start-call-btn">
+                            <i class="fas fa-comments"></i> Go to Messages
+                        </a>
+                    </div>`;
+            }
+        } catch (e) {
+            document.getElementById('callsList').innerHTML = `
+                <div class="empty-calls">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Could not load calls</h3>
+                    <p>Please try again later</p>
+                </div>`;
+        }
+    }
+
+    // ============ RENDER CALLS ============
+    function renderCalls(calls) {
+        if (calls.length === 0) {
+            document.getElementById('callsList').innerHTML = `
+                <div class="empty-calls">
+                    <i class="fas fa-phone-slash"></i>
+                    <h3>No calls in this category</h3>
+                </div>`;
+            return;
+        }
+
+        document.getElementById('callsList').innerHTML = calls.map(call => {
+            const avatarSrc = call.other_image && call.other_image.startsWith('http') 
+                ? call.other_image 
+                : `/static/uploads/${call.other_image || 'default.jpg'}`;
+
+            const directionIcon = call.direction === 'incoming' 
+                ? '<i class="fas fa-arrow-down"></i>' 
+                : '<i class="fas fa-arrow-up"></i>';
+
+            const directionClass = call.status === 'missed' ? 'missed' : call.direction;
+
+            const typeIcon = call.call_type === 'video' 
+                ? '<i class="fas fa-video"></i>' 
+                : '<i class="fas fa-phone"></i>';
+
+            const typeClass = call.call_type === 'video' ? 'video' : 'audio';
+
+            const statusBadge = call.status === 'missed' 
+                ? '<span class="call-status-badge missed">Missed</span>'
+                : call.status === 'active'
+                    ? '<span class="call-status-badge active">Active</span>'
+                    : '';
+
+            const duration = call.duration 
+                ? formatDuration(call.duration) 
+                : (call.status === 'missed' ? 'No answer' : '');
+
+            return `
+                <div class="call-item" data-type="${call.call_type}" data-status="${call.status}">
+                    <div class="call-avatar">
+                        <img src="${avatarSrc}" alt="${call.other_user}" onerror="this.src='/static/uploads/default.jpg'">
+                        <div class="call-type-icon ${typeClass}">
+                            ${typeIcon}
+                        </div>
+                    </div>
+                    <div class="call-info">
+                        <div class="call-name">@${call.other_user}</div>
+                        <div class="call-details">
+                            <span class="call-direction ${directionClass}">
+                                ${directionIcon} ${call.direction === 'incoming' ? 'Incoming' : 'Outgoing'}
+                            </span>
+                            <span>·</span>
+                            <span>${duration || call.started_at}</span>
+                            ${statusBadge}
+                        </div>
+                    </div>
+                    <div class="call-actions">
+                        <button class="quick-call-btn video-call" 
+                                onclick="startCall('${call.other_user}', 'video')" 
+                                title="Video Call">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="quick-call-btn audio-call" 
+                                onclick="startCall('${call.other_user}', 'audio')" 
+                                title="Voice Call">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="quick-call-btn message" 
+                                onclick="window.location.href='/messages?user=${call.other_user}'" 
+                                title="Message">
+                            <i class="fas fa-comment-dots"></i>
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // ============ FILTER CALLS ============
+    function filterCalls(type, button) {
+        document.querySelectorAll('.calls-tab').forEach(t => t.classList.remove('active'));
+        button.classList.add('active');
+
+        let filtered = allCalls;
+        if (type === 'missed') {
+            filtered = allCalls.filter(c => c.status === 'missed');
+        } else if (type === 'video') {
+            filtered = allCalls.filter(c => c.call_type === 'video');
+        } else if (type === 'audio') {
+            filtered = allCalls.filter(c => c.call_type === 'audio');
+        }
+
+        renderCalls(filtered);
+    }
+
+    // ============ START CALL ============
+    async function startCall(username, callType) {
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch('/api/call/initiate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                },
+                body: JSON.stringify({ receiver: username, call_type: callType })
+            });
+
+            const data = await response.json();
+
+            if (data.room_id) {
+                window.location.href = `/call/${data.call_id}?room=${data.room_id}&type=${callType}`;
+            } else {
+                showToast('Failed to start call', 'error');
+            }
+        } catch (e) {
+            showToast('Could not initiate call', 'error');
+        }
+    }
+
+    // ============ CLEAR HISTORY ============
+    function clearHistory() {
+        if (confirm('Clear all call history?')) {
+            allCalls = [];
+            renderCalls([]);
+            updateMissedCount();
+            showToast('Call history cleared', 'success');
+        }
+    }
+
+    // ============ UPDATE MISSED COUNT ============
+    function updateMissedCount() {
+        const missedCount = allCalls.filter(c => c.status === 'missed').length;
+        document.getElementById('missedCount').textContent = missedCount || '0';
+    }
+
+    // ============ FORMAT DURATION ============
+    function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        if (mins === 0) return `${secs}s`;
+        return `${mins}m ${secs}s`;
+    }
+
+    // ============ INITIALIZE ============
+    document.addEventListener('DOMContentLoaded', loadCallHistory);
+</script>
+{% endblock %}
