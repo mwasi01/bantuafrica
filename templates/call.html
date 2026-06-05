@@ -1,0 +1,751 @@
+{% extends "base.html" %}
+
+{% block title %}Call | Bantu Africa{% endblock %}
+
+{% block content %}
+<style>
+    /* ============ CALL CONTAINER ============ */
+    .call-container {
+        height: 100vh;
+        height: 100dvh;
+        background: #0a0a0a;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Remote Video (Full Screen Background) */
+    .remote-video-wrap {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #000;
+    }
+
+    .remote-video-wrap video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .remote-video-wrap .no-video-placeholder {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.5);
+    }
+
+    .no-video-placeholder i {
+        font-size: 80px;
+        margin-bottom: 16px;
+        display: block;
+    }
+
+    .no-video-placeholder .caller-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 8px;
+    }
+
+    .no-video-placeholder .call-status {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Local Video (Picture-in-Picture) */
+    .local-video-wrap {
+        position: absolute;
+        top: 60px;
+        right: 16px;
+        width: 120px;
+        height: 180px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: #1a1a1a;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        z-index: 10;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .local-video-wrap:hover {
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: scale(1.02);
+    }
+
+    .local-video-wrap video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .local-video-wrap .no-camera {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: rgba(255, 255, 255, 0.4);
+        font-size: 30px;
+    }
+
+    @media (max-width: 480px) {
+        .local-video-wrap {
+            width: 100px;
+            height: 150px;
+            top: 50px;
+            right: 10px;
+        }
+    }
+
+    /* Call Info Bar */
+    .call-info-bar {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        text-align: center;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    .call-info-bar .call-username {
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .call-info-bar .call-timer {
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.8);
+        margin-top: 2px;
+    }
+
+    /* Call Controls */
+    .call-controls {
+        position: absolute;
+        bottom: 40px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        z-index: 10;
+        padding: 0 20px;
+    }
+
+    .call-control-btn {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        transition: all 0.2s;
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        backdrop-filter: blur(10px);
+    }
+
+    .call-control-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: scale(1.05);
+    }
+
+    .call-control-btn:active {
+        transform: scale(0.95);
+    }
+
+    .call-control-btn.active {
+        background: white;
+        color: #000;
+    }
+
+    .call-control-btn.end-call {
+        background: #ef4444;
+        color: white;
+        width: 64px;
+        height: 64px;
+        font-size: 26px;
+    }
+
+    .call-control-btn.end-call:hover {
+        background: #dc2626;
+    }
+
+    .call-control-btn .icon-label {
+        display: none;
+    }
+
+    @media (max-width: 480px) {
+        .call-controls {
+            gap: 14px;
+            bottom: 30px;
+        }
+        .call-control-btn {
+            width: 48px;
+            height: 48px;
+            font-size: 18px;
+        }
+        .call-control-btn.end-call {
+            width: 56px;
+            height: 56px;
+            font-size: 22px;
+        }
+    }
+
+    /* Incoming Call Overlay */
+    .incoming-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .incoming-overlay .caller-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        margin-bottom: 16px;
+    }
+
+    .incoming-overlay .caller-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 8px;
+    }
+
+    .incoming-overlay .call-type {
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 32px;
+    }
+
+    .incoming-actions {
+        display: flex;
+        gap: 30px;
+    }
+
+    .incoming-btn {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        border: none;
+        cursor: pointer;
+        font-size: 26px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .incoming-btn.accept {
+        background: #22c55e;
+        color: white;
+    }
+
+    .incoming-btn.accept:hover {
+        background: #16a34a;
+    }
+
+    .incoming-btn.reject {
+        background: #ef4444;
+        color: white;
+    }
+
+    .incoming-btn.reject:hover {
+        background: #dc2626;
+    }
+
+    .incoming-btn-label {
+        color: white;
+        font-size: 12px;
+        margin-top: 8px;
+        font-weight: 600;
+    }
+
+    /* Call Ended Overlay */
+    .ended-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        text-align: center;
+        color: white;
+    }
+
+    .ended-overlay h3 {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .ended-overlay p {
+        font-size: 14px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 24px;
+    }
+
+    .ended-overlay .back-btn {
+        padding: 12px 32px;
+        border-radius: 25px;
+        background: white;
+        color: black;
+        font-weight: 700;
+        font-size: 14px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    /* Loading */
+    .connecting-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 15;
+        color: white;
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    .connecting-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 16px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .connecting-overlay p {
+        font-size: 15px;
+    }
+</style>
+
+<div class="call-container" id="callContainer">
+    <!-- Remote Video -->
+    <div class="remote-video-wrap" id="remoteVideoWrap">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="no-video-placeholder" id="noVideoPlaceholder">
+            <i class="fas fa-user-circle"></i>
+            <div class="caller-name" id="displayCallerName">Connecting...</div>
+            <div class="call-status" id="displayCallStatus"></div>
+        </div>
+    </div>
+
+    <!-- Local Video (PiP) -->
+    <div class="local-video-wrap" id="localVideoWrap" onclick="switchCamera()">
+        <video id="localVideo" autoplay playsinline muted></video>
+        <div class="no-camera" id="noCameraIcon" style="display:none;">
+            <i class="fas fa-video-slash"></i>
+        </div>
+    </div>
+
+    <!-- Call Info -->
+    <div class="call-info-bar">
+        <div class="call-username" id="callUsername">{{ other_user.username }}</div>
+        <div class="call-timer" id="callTimer">00:00</div>
+    </div>
+
+    <!-- Connecting Overlay -->
+    <div class="connecting-overlay" id="connectingOverlay">
+        <div class="connecting-spinner"></div>
+        <p>Connecting...</p>
+    </div>
+
+    <!-- Incoming Call Overlay -->
+    <div class="incoming-overlay" id="incomingOverlay" style="display: none;">
+        {% if other_user.profile_image and other_user.profile_image.startswith('http') %}
+        <img src="{{ other_user.profile_image }}" alt="{{ other_user.username }}" class="caller-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        {% else %}
+        <img src="{{ url_for('static', filename='uploads/' + other_user.profile_image) }}" alt="{{ other_user.username }}" class="caller-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+        {% endif %}
+        <div class="caller-name">{{ other_user.username }}</div>
+        <div class="call-type" id="incomingCallType">Video Call</div>
+        <div class="incoming-actions">
+            <div style="text-align: center;">
+                <button class="incoming-btn reject" onclick="rejectCall()">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <div class="incoming-btn-label">Decline</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="incoming-btn accept" onclick="acceptCall()">
+                    <i class="fas fa-phone"></i>
+                </button>
+                <div class="incoming-btn-label">Accept</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ended Overlay -->
+    <div class="ended-overlay" id="endedOverlay" style="display: none;">
+        <i class="fas fa-check-circle" style="font-size: 48px; color: #22c55e; margin-bottom: 16px;"></i>
+        <h3>Call Ended</h3>
+        <p id="callDuration">Duration: 00:00</p>
+        <a href="{{ url_for('messages') }}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Messages
+        </a>
+    </div>
+
+    <!-- Call Controls -->
+    <div class="call-controls" id="callControls" style="display: none;">
+        <button class="call-control-btn" id="micBtn" onclick="toggleMic()" title="Mute Microphone">
+            <i class="fas fa-microphone"></i>
+        </button>
+        <button class="call-control-btn" id="videoBtn" onclick="toggleVideo()" title="Turn Off Camera">
+            <i class="fas fa-video"></i>
+        </button>
+        <button class="call-control-btn" id="speakerBtn" onclick="toggleSpeaker()" title="Speaker">
+            <i class="fas fa-volume-up"></i>
+        </button>
+        <button class="call-control-btn" id="switchCameraBtn" onclick="switchCamera()" title="Switch Camera">
+            <i class="fas fa-camera-retro"></i>
+        </button>
+        <button class="call-control-btn end-call" onclick="endCall()" title="End Call">
+            <i class="fas fa-phone-slash"></i>
+        </button>
+    </div>
+</div>
+
+<meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ============ WEBRTC CALL STATE ============
+    let localStream = null;
+    let peerConnection = null;
+    let callTimerInterval = null;
+    let callSeconds = 0;
+    let isMicMuted = false;
+    let isVideoOff = false;
+    let isSpeakerOn = true;
+    let currentCallId = {{ call_id|default(0) }};
+    let roomId = "{{ room_id|default('') }}";
+    let callType = "{{ call_type|default('video') }}";
+    let isIncoming = {{ 'true' if is_incoming|default(false) else 'false' }};
+    let isCallActive = false;
+
+    // ============ ICE SERVERS (STUN/TURN) ============
+    const iceServers = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    // ============ INITIALIZATION ============
+    async function initializeCall() {
+        if (isIncoming) {
+            showIncomingUI();
+        } else {
+            await startCall();
+        }
+    }
+
+    // ============ START OUTGOING CALL ============
+    async function startCall() {
+        try {
+            // Request media
+            if (callType === 'video') {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+                    audio: true
+                });
+            } else {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: false,
+                    audio: true
+                });
+            }
+
+            // Show local video
+            const localVideo = document.getElementById('localVideo');
+            localVideo.srcObject = localStream;
+
+            // Hide connecting, show controls
+            document.getElementById('connectingOverlay').style.display = 'none';
+            document.getElementById('callControls').style.display = 'flex';
+            if (callType === 'audio') {
+                document.getElementById('localVideoWrap').style.display = 'none';
+            }
+
+            // Create peer connection
+            await createPeerConnection();
+
+            // Add local stream to peer
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            // Create offer
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            // Start call timer
+            startCallTimer();
+            isCallActive = true;
+
+            // Update call status via API
+            if (currentCallId) {
+                await fetch(`/api/call/${currentCallId}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                    },
+                    body: JSON.stringify({ status: 'active' })
+                });
+            }
+
+        } catch (error) {
+            console.error('Failed to start call:', error);
+            showToast('Could not access camera/microphone', 'error');
+            window.location.href = '/messages';
+        }
+    }
+
+    // ============ ACCEPT INCOMING CALL ============
+    async function acceptCall() {
+        document.getElementById('incomingOverlay').style.display = 'none';
+        await startCall();
+    }
+
+    // ============ REJECT CALL ============
+    async function rejectCall() {
+        if (currentCallId) {
+            await fetch(`/api/call/${currentCallId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({ status: 'missed' })
+            });
+        }
+        window.location.href = '/messages';
+    }
+
+    // ============ END CALL ============
+    async function endCall() {
+        isCallActive = false;
+        clearInterval(callTimerInterval);
+
+        // Stop all tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+
+        // Close peer connection
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+
+        // Update call status
+        if (currentCallId) {
+            await fetch(`/api/call/${currentCallId}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({ status: 'ended' })
+            });
+        }
+
+        // Show ended overlay
+        document.getElementById('callControls').style.display = 'none';
+        document.getElementById('endedOverlay').style.display = 'flex';
+        document.getElementById('callDuration').textContent = `Duration: ${formatCallTime(callSeconds)}`;
+    }
+
+    // ============ CREATE PEER CONNECTION ============
+    async function createPeerConnection() {
+        peerConnection = new RTCPeerConnection(iceServers);
+
+        // Handle remote stream
+        peerConnection.ontrack = (event) => {
+            const remoteVideo = document.getElementById('remoteVideo');
+            if (remoteVideo.srcObject !== event.streams[0]) {
+                remoteVideo.srcObject = event.streams[0];
+                document.getElementById('noVideoPlaceholder').style.display = 'none';
+            }
+        };
+
+        // Handle ICE candidates
+        peerConnection.onicecandidate = (event) => {
+            if (event.candidate) {
+                // In production, send this to the other peer via signaling server
+                console.log('ICE candidate:', event.candidate);
+            }
+        };
+
+        // Handle connection state
+        peerConnection.onconnectionstatechange = () => {
+            if (peerConnection.connectionState === 'disconnected' || 
+                peerConnection.connectionState === 'failed') {
+                endCall();
+            }
+        };
+    }
+
+    // ============ TOGGLE MICROPHONE ============
+    function toggleMic() {
+        if (!localStream) return;
+        isMicMuted = !isMicMuted;
+        localStream.getAudioTracks().forEach(track => {
+            track.enabled = !isMicMuted;
+        });
+        const btn = document.getElementById('micBtn');
+        if (isMicMuted) {
+            btn.classList.add('active');
+            btn.querySelector('i').className = 'fas fa-microphone-slash';
+            btn.title = 'Unmute Microphone';
+        } else {
+            btn.classList.remove('active');
+            btn.querySelector('i').className = 'fas fa-microphone';
+            btn.title = 'Mute Microphone';
+        }
+    }
+
+    // ============ TOGGLE VIDEO ============
+    function toggleVideo() {
+        if (!localStream) return;
+        isVideoOff = !isVideoOff;
+        localStream.getVideoTracks().forEach(track => {
+            track.enabled = !isVideoOff;
+        });
+        const btn = document.getElementById('videoBtn');
+        const noCamera = document.getElementById('noCameraIcon');
+        if (isVideoOff) {
+            btn.classList.add('active');
+            btn.querySelector('i').className = 'fas fa-video-slash';
+            btn.title = 'Turn On Camera';
+            noCamera.style.display = 'flex';
+        } else {
+            btn.classList.remove('active');
+            btn.querySelector('i').className = 'fas fa-video';
+            btn.title = 'Turn Off Camera';
+            noCamera.style.display = 'none';
+        }
+    }
+
+    // ============ TOGGLE SPEAKER ============
+    function toggleSpeaker() {
+        isSpeakerOn = !isSpeakerOn;
+        const btn = document.getElementById('speakerBtn');
+        const remoteVideo = document.getElementById('remoteVideo');
+        if (remoteVideo) {
+            remoteVideo.muted = !isSpeakerOn;
+        }
+        if (isSpeakerOn) {
+            btn.classList.remove('active');
+            btn.querySelector('i').className = 'fas fa-volume-up';
+        } else {
+            btn.classList.add('active');
+            btn.querySelector('i').className = 'fas fa-volume-off';
+        }
+    }
+
+    // ============ SWITCH CAMERA ============
+    async function switchCamera() {
+        if (!localStream || callType === 'audio') return;
+        try {
+            const videoTrack = localStream.getVideoTracks()[0];
+            if (!videoTrack) return;
+
+            const currentFacing = videoTrack.getSettings().facingMode;
+            const newFacing = currentFacing === 'user' ? 'environment' : 'user';
+
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: newFacing }
+            });
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+
+            // Replace track in peer connection
+            const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+            if (sender) {
+                sender.replaceTrack(newVideoTrack);
+            }
+
+            // Update local stream
+            localStream.removeTrack(videoTrack);
+            videoTrack.stop();
+            localStream.addTrack(newVideoTrack);
+
+            const localVideo = document.getElementById('localVideo');
+            localVideo.srcObject = localStream;
+        } catch (e) {
+            console.log('Could not switch camera:', e);
+        }
+    }
+
+    // ============ CALL TIMER ============
+    function startCallTimer() {
+        callSeconds = 0;
+        updateTimerDisplay();
+        callTimerInterval = setInterval(() => {
+            callSeconds++;
+            updateTimerDisplay();
+        }, 1000);
+    }
+
+    function updateTimerDisplay() {
+        document.getElementById('callTimer').textContent = formatCallTime(callSeconds);
+    }
+
+    function formatCallTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // ============ UI HELPERS ============
+    function showIncomingUI() {
+        document.getElementById('connectingOverlay').style.display = 'none';
+        document.getElementById('incomingOverlay').style.display = 'flex';
+        document.getElementById('incomingCallType').textContent = 
+            callType === 'video' ? 'Video Call' : 'Voice Call';
+        document.getElementById('localVideoWrap').style.display = 'none';
+    }
+
+    // ============ CLEANUP ON PAGE LEAVE ============
+    window.addEventListener('beforeunload', () => {
+        if (isCallActive) {
+            endCall();
+        }
+    });
+
+    // ============ INITIALIZE ============
+    document.addEventListener('DOMContentLoaded', initializeCall);
+</script>
+{% endblock %}
