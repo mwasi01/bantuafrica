@@ -11,6 +11,53 @@
         position: relative;
         overflow: hidden;
     }
+
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.85);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        backdrop-filter: blur(10px);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: rgba(255,255,255,0.6);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: white; }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
     
     .story-slide {
         position: absolute;
@@ -78,6 +125,7 @@
         height: 36px;
         border-radius: 50%;
         border: 2px solid white;
+        object-fit: cover;
     }
     
     .story-username {
@@ -120,7 +168,7 @@
     
     .story-reply-bar {
         position: absolute;
-        bottom: 30px;
+        bottom: 80px;
         left: 16px;
         right: 16px;
         z-index: 10;
@@ -161,9 +209,11 @@
         
         <!-- Story Header -->
         <div class="story-header">
-            <img src="{{ url_for('static', filename='uploads/' + story_owner.profile_image) }}" 
-                 alt="{{ story_owner.username }}"
-                 class="story-user-avatar">
+            {% if story_owner.profile_image and story_owner.profile_image.startswith('http') %}
+            <img src="{{ story_owner.profile_image }}" alt="{{ story_owner.username }}" class="story-user-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            {% else %}
+            <img src="{{ url_for('static', filename='uploads/' + story_owner.profile_image) }}" alt="{{ story_owner.username }}" class="story-user-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+            {% endif %}
             <div>
                 <div class="story-username">{{ story_owner.username }}</div>
                 <div class="story-time" id="storyTime">Just now</div>
@@ -174,13 +224,17 @@
         {% for story in stories %}
         <div class="story-slide" data-index="{{ loop.index0 }}" id="slide{{ loop.index0 }}">
             {% if story.video %}
-            <video src="{{ url_for('static', filename='uploads/' + story.video) }}" 
-                   muted playsinline preload="auto"
-                   id="video{{ loop.index0 }}"></video>
+                {% if story.video.startswith('http') %}
+                <video src="{{ story.video }}" muted playsinline preload="auto" id="video{{ loop.index0 }}"></video>
+                {% else %}
+                <video src="{{ url_for('static', filename='uploads/' + story.video) }}" muted playsinline preload="auto" id="video{{ loop.index0 }}"></video>
+                {% endif %}
             {% elif story.image %}
-            <img src="{{ url_for('static', filename='uploads/' + story.image) }}" 
-                 alt="Story"
-                 loading="eager">
+                {% if story.image.startswith('http') %}
+                <img src="{{ story.image }}" alt="Story" loading="eager">
+                {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + story.image) }}" alt="Story" loading="eager">
+                {% endif %}
             {% endif %}
             
             {% if story.caption %}
@@ -209,10 +263,10 @@
         <!-- No Stories State -->
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 20px;">
             <div>
-                <i class="fas fa-clock" style="font-size: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
+                <i class="fas fa-clock" style="font-size: 64px; color: rgba(255,255,255,0.3); margin-bottom: 16px;"></i>
                 <h2 style="color: white; margin-bottom: 8px;">No Stories</h2>
-                <p style="color: var(--text-secondary);">Create your first story to share with followers</p>
-                <a href="/stories/create" class="btn-follow" style="display: inline-block; margin-top: 16px;">
+                <p style="color: rgba(255,255,255,0.6);">Create your first story to share with followers</p>
+                <a href="/stories/create" style="display: inline-block; margin-top: 16px; background: var(--accent); color: white; padding: 10px 24px; border-radius: 20px; text-decoration: none; font-weight: 600;">
                     <i class="fas fa-plus-circle"></i> Create Story
                 </a>
             </div>
@@ -220,7 +274,29 @@
     {% endif %}
 </div>
 
-<!-- Hidden CSRF token -->
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 <meta name="csrf-token" content="{{ csrf_token() }}">
 {% endblock %}
 
@@ -231,7 +307,7 @@ let currentStoryIndex = 0;
 const totalStories = {{ stories|length }};
 let storyTimer;
 let isPaused = false;
-const STORY_DURATION = 5000; // 5 seconds per story
+const STORY_DURATION = 5000;
 
 function initializeStories() {
     showStory(0);
@@ -239,46 +315,35 @@ function initializeStories() {
 }
 
 function showStory(index) {
-    // Hide all slides
     document.querySelectorAll('.story-slide').forEach(s => s.classList.remove('active'));
     
-    // Show current slide
     const slide = document.getElementById('slide' + index);
     if (slide) {
         slide.classList.add('active');
         currentStoryIndex = index;
         
-        // Handle video
         const video = slide.querySelector('video');
         if (video) {
             video.currentTime = 0;
             video.play();
-            STORY_DURATION = video.duration * 1000 || 5000;
         }
         
-        // Update time
         document.getElementById('storyTime').textContent = 'Just now';
-        
-        // Reset progress
         resetProgress();
     }
 }
 
 function nextStory() {
-    // Mark current as completed
     markProgressComplete(currentStoryIndex);
-    
     if (currentStoryIndex < totalStories - 1) {
         showStory(currentStoryIndex + 1);
     } else {
-        // All stories viewed, go to next user or close
         loadNextUserStories();
     }
 }
 
 function previousStory() {
     if (currentStoryIndex > 0) {
-        // Un-mark previous
         unmarkProgress(currentStoryIndex);
         showStory(currentStoryIndex - 1);
     }
@@ -294,7 +359,6 @@ function startProgress() {
             progress += 50;
             const percent = (progress / STORY_DURATION) * 100;
             segment.style.width = Math.min(percent, 100) + '%';
-            
             if (progress >= STORY_DURATION) {
                 clearInterval(storyTimer);
                 nextStory();
@@ -341,8 +405,6 @@ function closeStories() {
 }
 
 function loadNextUserStories() {
-    // In a full implementation, this would fetch the next user's stories
-    // For now, close the viewer
     closeStories();
 }
 
@@ -351,7 +413,6 @@ function sendStoryReply() {
     const message = input.value.trim();
     if (!message) return;
     
-    // Send reply via fetch
     const storyOwner = '{{ story_owner.username if story_owner else "" }}';
     fetch('/api/messages/send', {
         method: 'POST',
@@ -374,7 +435,6 @@ function sendStoryReply() {
     });
 }
 
-// Pause on touch hold
 document.addEventListener('touchstart', (e) => {
     if (e.target.closest('.tap-zone-left') || e.target.closest('.tap-zone-right')) {
         isPaused = true;
@@ -385,14 +445,12 @@ document.addEventListener('touchend', () => {
     isPaused = false;
 });
 
-// Keyboard navigation
 document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowRight') nextStory();
     if (e.key === 'ArrowLeft') previousStory();
     if (e.key === 'Escape') closeStories();
 });
 
-// Initialize
 document.addEventListener('DOMContentLoaded', initializeStories);
 {% endif %}
 </script>
