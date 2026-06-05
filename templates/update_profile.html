@@ -7,9 +7,56 @@
     .edit-profile-container {
         max-width: 600px;
         margin: 0 auto;
-        padding: 20px 16px 100px;
+        padding: 20px 16px 120px;
         min-height: 100vh;
         background: var(--bg-primary);
+    }
+
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
 
     .edit-header {
@@ -24,6 +71,7 @@
     .edit-header h3 {
         font-size: 20px;
         font-weight: 700;
+        color: var(--text-primary);
     }
 
     .cancel-btn {
@@ -53,8 +101,8 @@
     }
 
     .avatar-preview {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
         object-fit: cover;
         border: 3px solid var(--border-color);
@@ -119,12 +167,12 @@
     }
 
     .avatar-btn.remove {
-        color: var(--accent);
+        color: #ef4444;
         border-color: transparent;
     }
 
     .avatar-btn.remove:hover {
-        background: rgba(255, 45, 85, 0.1);
+        background: rgba(239, 68, 68, 0.1);
     }
 
     /* Form Styles */
@@ -145,7 +193,7 @@
     .form-input {
         width: 100%;
         padding: 14px 16px;
-        background: var(--bg-card);
+        background: white;
         border: 1px solid var(--border-color);
         border-radius: 12px;
         color: var(--text-primary);
@@ -157,7 +205,7 @@
 
     .form-input:focus {
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     }
 
     .form-input::placeholder {
@@ -188,22 +236,22 @@
     }
 
     .char-count.warning {
-        color: var(--accent);
+        color: #ef4444;
     }
 
     /* Danger Zone */
     .danger-zone {
         margin-top: 40px;
         padding: 20px;
-        border: 1px solid rgba(255, 45, 85, 0.3);
+        border: 1px solid rgba(239, 68, 68, 0.3);
         border-radius: 16px;
-        background: rgba(255, 45, 85, 0.03);
+        background: rgba(239, 68, 68, 0.03);
     }
 
     .danger-zone h4 {
         font-size: 15px;
         font-weight: 700;
-        color: var(--accent);
+        color: #ef4444;
         margin-bottom: 8px;
         display: flex;
         align-items: center;
@@ -220,8 +268,8 @@
     .btn-danger {
         padding: 10px 20px;
         background: transparent;
-        color: var(--accent);
-        border: 1px solid var(--accent);
+        color: #ef4444;
+        border: 1px solid #ef4444;
         border-radius: 10px;
         font-size: 13px;
         font-weight: 600;
@@ -230,20 +278,26 @@
     }
 
     .btn-danger:hover {
-        background: var(--accent);
+        background: #ef4444;
         color: white;
     }
 
-    /* Fixed Bottom Bar */
+    /* Fixed Bottom Save Bar */
     .save-bar {
         position: fixed;
-        bottom: 0;
+        bottom: 60px;
         left: 0;
         right: 0;
         padding: 12px 16px var(--safe-bottom, 20px);
         background: var(--bg-secondary);
         border-top: 1px solid var(--border-color);
-        z-index: 100;
+        z-index: 1001;
+    }
+
+    @media (min-width: 992px) {
+        .save-bar {
+            bottom: 0;
+        }
     }
 
     .save-bar-inner {
@@ -264,7 +318,6 @@
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s;
-        box-shadow: 0 8px 24px rgba(255, 45, 85, 0.25);
     }
 
     .btn-save:hover {
@@ -317,20 +370,19 @@
         color: var(--text-primary);
     }
 
-    /* Success/Error feedback for inputs */
     .form-input.error {
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.1);
+        border-color: #ef4444;
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
     }
 
     .form-input.success {
-        border-color: #4caf50;
-        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        border-color: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
     }
 
     .error-text {
         font-size: 12px;
-        color: var(--accent);
+        color: #ef4444;
         margin-top: 4px;
         display: none;
     }
@@ -341,7 +393,7 @@
 
     @media (max-width: 480px) {
         .edit-profile-container {
-            padding: 12px 12px 100px;
+            padding: 12px 12px 140px;
         }
     }
 </style>
@@ -356,16 +408,24 @@
     </div>
 
     <form method="POST" action="{{ url_for('update_profile') }}" enctype="multipart/form-data" id="editProfileForm">
-       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
         <!-- Profile Picture -->
         <div class="avatar-section">
             <label class="avatar-wrapper" for="profileImageInput" title="Click to change photo">
+                {% if current_user.profile_image and current_user.profile_image.startswith('http') %}
+                <img src="{{ current_user.profile_image }}" 
+                     alt="{{ current_user.username }}"
+                     class="avatar-preview"
+                     id="avatarPreview"
+                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% else %}
                 <img src="{{ url_for('static', filename='uploads/' + current_user.profile_image) }}" 
                      alt="{{ current_user.username }}"
                      class="avatar-preview"
                      id="avatarPreview"
                      onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% endif %}
                 <div class="avatar-overlay">
                     <i class="fas fa-camera"></i>
                 </div>
@@ -376,7 +436,7 @@
                    accept="image/*" 
                    style="display: none;"
                    onchange="previewAvatar(this)">
-            <span class="avatar-hint">Click to change your profile photo</span>
+            <span class="avatar-hint">Click your photo to change it</span>
             <div class="avatar-actions">
                 <button type="button" class="avatar-btn" onclick="document.getElementById('profileImageInput').click()">
                     <i class="fas fa-upload"></i> Upload Photo
@@ -496,8 +556,8 @@
     </form>
 </div>
 
-<!-- Fixed Save Bar -->
-<div class="save-bar">
+<!-- Fixed Save Bar - Above mobile nav -->
+<div class="save-bar" id="saveBar">
     <div class="save-bar-inner">
         <button type="button" class="btn-reset" onclick="resetForm()">
             <i class="fas fa-undo"></i> Reset
@@ -508,11 +568,38 @@
     </div>
 </div>
 
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('notifications') }}" class="mobile-nav-item">
+        <i class="fas fa-bell"></i>
+        <span>Alerts</span>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item active">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;">
     <div style="background: var(--bg-secondary); border-radius: 20px; padding: 32px; max-width: 420px; width: 90%; text-align: center;">
-        <i class="fas fa-exclamation-circle" style="font-size: 48px; color: var(--accent); margin-bottom: 12px;"></i>
-        <h3 style="margin-bottom: 8px;">Delete Your Account?</h3>
+        <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #ef4444; margin-bottom: 12px;"></i>
+        <h3 style="margin-bottom: 8px; color: var(--text-primary);">Delete Your Account?</h3>
         <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
             This action is irreversible. All your data will be permanently deleted. 
             Please type <strong>{{ current_user.username }}</strong> to confirm.
@@ -527,7 +614,7 @@
                 Cancel
             </button>
             <button id="confirmDeleteBtn" disabled
-                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--accent); color: white; font-weight: 600; cursor: pointer; opacity: 0.5;">
+                    style="flex: 1; padding: 12px; border-radius: 10px; border: none; background: #ef4444; color: white; font-weight: 600; cursor: pointer; opacity: 0.5;">
                 Delete Forever
             </button>
         </div>
@@ -546,14 +633,12 @@
         const file = input.files[0];
         if (!file) return;
 
-        // Validate file type
         if (!file.type.startsWith('image/')) {
             showToast('Please select an image file.', 'error');
             input.value = '';
             return;
         }
 
-        // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
             showToast('Image must be less than 5MB.', 'error');
             input.value = '';
@@ -627,7 +712,6 @@
     editProfileForm.addEventListener('submit', function(e) {
         const username = usernameInput.value.trim();
         
-        // Validate username
         if (!username || username.length < 3) {
             e.preventDefault();
             usernameInput.classList.add('error');
@@ -637,7 +721,6 @@
             return false;
         }
 
-        // Show loading state
         saveBtn.classList.add('loading');
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-inline"></span> Saving...';
@@ -681,18 +764,12 @@
         }
     });
 
-    // Close modal on Escape
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeDeleteModal();
-        }
+        if (e.key === 'Escape') closeDeleteModal();
     });
 
-    // Close modal on backdrop click
     document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
+        if (e.target === this) closeDeleteModal();
     });
 
     // ============ UNSAVED CHANGES WARNING ============
@@ -715,7 +792,6 @@
         }
     });
 
-    // Remove warning when saving
     editProfileForm.addEventListener('submit', function() {
         window.removeEventListener('beforeunload', () => {});
     });
