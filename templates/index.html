@@ -3,6 +3,359 @@
 {% block title %}Bantu Africa - Feed{% endblock %}
 
 {% block content %}
+<style>
+    .feed-container {
+        max-width: 500px;
+        margin: 0 auto;
+        padding-bottom: 70px;
+    }
+
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+        .feed-container { padding-bottom: 20px; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Post Card */
+    .post-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        margin: 12px 16px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .post-media-container {
+        position: relative;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        max-height: 500px;
+        overflow: hidden;
+    }
+
+    .post-media-container img,
+    .post-media-container video {
+        width: 100%;
+        max-height: 500px;
+        object-fit: contain;
+    }
+
+    .post-media-container video {
+        cursor: pointer;
+    }
+
+    /* Video play/pause overlay */
+    .video-play-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.2);
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+
+    .video-play-overlay i {
+        font-size: 50px;
+        color: white;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+
+    .post-media-container.paused .video-play-overlay {
+        opacity: 1;
+    }
+
+    .post-body {
+        padding: 14px 16px;
+    }
+
+    .post-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .post-author img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid var(--border-color);
+    }
+
+    .post-author .username {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-primary);
+        text-decoration: none;
+    }
+
+    .post-author .username:hover {
+        color: var(--accent);
+    }
+
+    .post-content {
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+
+    .post-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-secondary);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .post-category {
+        background: #eff6ff;
+        color: var(--accent);
+        padding: 2px 10px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .post-category:hover {
+        background: var(--accent);
+        color: white;
+    }
+
+    .post-actions {
+        display: flex;
+        gap: 20px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 14px;
+        cursor: pointer;
+        padding: 6px 0;
+        transition: all 0.2s;
+    }
+
+    .action-btn:hover { color: var(--accent); }
+    .action-btn.liked { color: #ef4444; }
+    .action-btn.liked i { animation: heartPop 0.3s ease; }
+
+    @keyframes heartPop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.3); }
+        100% { transform: scale(1); }
+    }
+
+    .empty-feed {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .empty-feed i {
+        font-size: 48px;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-feed h2 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+
+    .empty-feed p {
+        color: var(--text-secondary);
+        margin-bottom: 20px;
+    }
+
+    .empty-feed .discover-btn {
+        background: var(--accent);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-block;
+    }
+
+    /* Loading spinner */
+    .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid var(--border-color);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin: 20px auto;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+        .post-card {
+            margin: 8px 0;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+        .feed-container {
+            padding-bottom: 80px;
+        }
+    }
+</style>
+
+<div class="feed-container" id="feedContainer">
+    {% if posts %}
+        {% for post in posts %}
+        <div class="post-card" data-post-id="{{ post.id }}">
+            <!-- Media: Video or Image -->
+            {% if post.video %}
+            <div class="post-media-container" id="mediaContainer{{ post.id }}">
+                {% if post.video.startswith('http') %}
+                <video 
+                    src="{{ post.video }}"
+                    poster="{{ post.thumbnail if post.thumbnail and post.thumbnail.startswith('http') else '' }}"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    preload="metadata"
+                    id="postVideo{{ post.id }}"
+                    onclick="toggleVideo({{ post.id }})"
+                ></video>
+                {% else %}
+                <video 
+                    src="{{ url_for('static', filename='uploads/' + post.video) }}"
+                    poster="{{ url_for('static', filename='uploads/' + post.thumbnail) if post.thumbnail else '' }}"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    preload="metadata"
+                    id="postVideo{{ post.id }}"
+                    onclick="toggleVideo({{ post.id }})"
+                ></video>
+                {% endif %}
+                <div class="video-play-overlay" id="videoOverlay{{ post.id }}">
+                    <i class="fas fa-play-circle"></i>
+                </div>
+            </div>
+            {% elif post.image %}
+            <div class="post-media-container">
+                {% if post.image.startswith('http') %}
+                <img src="{{ post.image }}" alt="{{ post.title }}" loading="lazy">
+                {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + post.image) }}" alt="{{ post.title }}" loading="lazy">
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="post-body">
+                <div class="post-author">
+                    <a href="{{ url_for('user_profile', username=post.author.username) }}">
+                        {% if post.author.profile_image and post.author.profile_image.startswith('http') %}
+                        <img src="{{ post.author.profile_image }}" alt="{{ post.author.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        {% else %}
+                        <img src="{{ url_for('static', filename='uploads/' + post.author.profile_image) }}" alt="{{ post.author.username }}" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                        {% endif %}
+                    </a>
+                    <div>
+                        <a href="{{ url_for('user_profile', username=post.author.username) }}" class="username">@{{ post.author.username }}</a>
+                        {% if post.category %}
+                        <a href="{{ url_for('search', q=post.category) }}" class="post-category">{{ post.category }}</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="post-content">{{ post.content[:200] }}</div>
+                <div class="post-meta">
+                    <span>{{ post.created_at.strftime('%b %d, %Y') }}</span>
+                    <span>{{ post.like_count() }} likes</span>
+                    <span>{{ post.comment_count() }} comments</span>
+                </div>
+            </div>
+            
+            <div class="post-actions">
+                <button class="action-btn like-btn" data-post-id="{{ post.id }}" onclick="handleLike({{ post.id }}, this)">
+                    <i class="far fa-heart"></i> <span>{{ post.like_count() }}</span>
+                </button>
+                <button class="action-btn" onclick="window.location.href='{{ url_for('view_post', post_id=post.id) }}'">
+                    <i class="far fa-comment"></i> <span>{{ post.comment_count() }}</span>
+                </button>
+                <button class="action-btn" onclick="sharePost('{{ post.id }}', '{{ post.title|e }}', '{{ post.content[:100]|e }}')">
+                    <i class="far fa-share-square"></i> Share
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div id="scrollSentinel" style="height: 1px;"></div>
+    {% else %}
+        <div class="empty-feed">
+            <i class="fas fa-users"></i>
+            <h2>Welcome to Bantu Africa!</h2>
+            <p>Follow people to see their posts here</p>
+            <a href="{{ url_for('search') }}" class="discover-btn">Discover People</a>
+        </div>
+    {% endif %}
+</div>
+
 <!-- Mobile Bottom Navigation -->
 <nav class="mobile-nav">
     <a href="{{ url_for('home') }}" class="mobile-nav-item active">
@@ -20,150 +373,219 @@
         <i class="fas fa-bell"></i>
         <span>Alerts</span>
     </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
     <a href="{{ url_for('profile') }}" class="mobile-nav-item">
         <i class="fas fa-user"></i>
         <span>Profile</span>
     </a>
 </nav>
 
-<!-- TikTok-style Vertical Feed -->
-<div class="feed-container" id="feedContainer">
-    {% if posts %}
-        {% for post in posts %}
-        <div class="post-card" data-post-id="{{ post.id }}" data-category="{{ post.category or 'general' }}">
-            
-            <!-- Media: Video or Image -->
-            {% if post.video %}
-            <video 
-                src="{% if post.video.startswith('http') %}{{ post.video }}{% else %}{{ url_for('static', filename='uploads/' + post.video) }}{% endif %}"
-                poster="{% if post.thumbnail and post.thumbnail.startswith('http') %}{{ post.thumbnail }}{% elif post.thumbnail %}{{ url_for('static', filename='uploads/' + post.thumbnail) }}{% endif %}"
-                loop
-                muted
-                playsinline
-                preload="metadata"
-                class="post-media"
-                data-video-id="{{ post.id }}"
-            ></video>
-            {% elif post.image %}
-            <img src="{% if post.image.startswith('http') %}{{ post.image }}{% else %}{{ url_for('static', filename='uploads/' + post.image) }}{% endif %}" 
-                 alt="{{ post.title }}" 
-                 class="post-media"
-                 loading="lazy">
-            {% else %}
-            <div class="text-only-post" style="padding: 40px; color: white; text-align: center;">
-                <i class="fas fa-quote-left" style="font-size: 48px; opacity: 0.3; margin-bottom: 16px;"></i>
-                <p style="font-size: 20px; line-height: 1.5;">{{ post.content[:200] }}</p>
-            </div>
-            {% endif %}
-            
-            <!-- Bottom Overlay -->
-            <div class="post-overlay">
-                <div class="post-info">
-                    <div class="post-author">
-                        <a href="{{ url_for('user_profile', username=post.author.username) }}">
-                            <img src="{% if post.author.profile_image.startswith('http') %}{{ post.author.profile_image }}{% else %}{{ url_for('static', filename='uploads/' + post.author.profile_image) }}{% endif %}" 
-                                 alt="{{ post.author.username }}"
-                                 onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
-                        </a>
-                        <a href="{{ url_for('user_profile', username=post.author.username) }}" class="username">
-                            @{{ post.author.username }}
-                        </a>
-                        {% if post.author != current_user and not current_user.is_following(post.author) %}
-                        <button class="follow-btn follow-toggle" 
-                                data-username="{{ post.author.username }}"
-                                onclick="toggleFollow('{{ post.author.username }}', this)">
-                            Follow
-                        </button>
-                        {% endif %}
-                    </div>
-                    <p class="post-caption">{{ post.content[:150] }}</p>
-                    <div class="post-meta">
-                        <span>{{ post.created_at.strftime('%b %d') if post.created_at is string else post.created_at }}</span>
-                        {% if post.category %}
-                        <span class="post-category">{{ post.category }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Right Side Actions -->
-            <div class="post-actions">
-                <button class="action-btn like-btn" 
-                        data-post-id="{{ post.id }}"
-                        aria-label="Like">
-                    <i class="far fa-heart"></i>
-                    <span class="count like-count">{{ post.like_count() }}</span>
-                </button>
-                
-                <button class="action-btn comment-btn" 
-                        data-post-id="{{ post.id }}"
-                        onclick="window.location.href='{{ url_for('view_post', post_id=post.id) }}'"
-                        aria-label="Comment">
-                    <i class="far fa-comment"></i>
-                    <span class="count comment-count">{{ post.comment_count() }}</span>
-                </button>
-                
-                <button class="action-btn share-btn" 
-                        data-post-id="{{ post.id }}"
-                        aria-label="Share">
-                    <i class="far fa-share-square"></i>
-                    <span class="count">Share</span>
-                </button>
-            </div>
-        </div>
-        {% endfor %}
-        
-        <!-- Infinite Scroll Sentinel -->
-        <div id="scrollSentinel" style="height: 1px;"></div>
-        
-    {% else %}
-        <!-- Empty State -->
-        <div style="display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; padding: 20px;">
-            <div>
-                <i class="fas fa-users" style="font-size: 64px; color: var(--text-secondary); margin-bottom: 16px;"></i>
-                <h2 style="margin-bottom: 8px;">Welcome to Bantu Africa!</h2>
-                <p style="color: var(--text-secondary); margin-bottom: 20px;">Follow people to see their posts here</p>
-                <a href="{{ url_for('search') }}" class="btn-follow" style="padding: 12px 30px; border-radius: 25px; display: inline-block;">
-                    Discover People
-                </a>
-            </div>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Suggested Users Sidebar (Desktop only) -->
-{% if suggested_users %}
-<aside class="d-none d-lg-block" style="position: fixed; right: 20px; top: 80px; width: 280px;">
-    <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px;">
-        <h5 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Suggested for you</h5>
-        {% for suggested in suggested_users %}
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-            <a href="{{ url_for('user_profile', username=suggested.username) }}">
-                <img src="{% if suggested.profile_image.startswith('http') %}{{ suggested.profile_image }}{% else %}{{ url_for('static', filename='uploads/' + suggested.profile_image) }}{% endif %}" 
-                     alt="{{ suggested.username }}"
-                     style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;"
-                     onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
-            </a>
-            <div style="flex: 1; min-width: 0;">
-                <a href="{{ url_for('user_profile', username=suggested.username) }}" 
-                   style="font-size: 13px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    {{ suggested.username }}
-                </a>
-                <span style="font-size: 11px; color: var(--text-secondary);">{{ suggested.followers.count() }} followers</span>
-            </div>
-            <button class="follow-btn follow-toggle" 
-                    data-username="{{ suggested.username }}"
-                    onclick="toggleFollow('{{ suggested.username }}', this)"
-                    style="font-size: 11px; padding: 3px 12px;">
-                Follow
-            </button>
-        </div>
-        {% endfor %}
-    </div>
-</aside>
-{% endif %}
+<meta name="csrf-token" content="{{ csrf_token() if csrf_token else '' }}">
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // ============ VIDEO AUTOPLAY ON SCROLL ============
+    document.addEventListener('DOMContentLoaded', function() {
+        const videoObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const video = entry.target.querySelector('video');
+                const container = entry.target;
+                if (!video) return;
+                
+                if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+                    video.play().catch(() => {});
+                    container.classList.remove('paused');
+                } else {
+                    video.pause();
+                    container.classList.add('paused');
+                }
+            });
+        }, {
+            threshold: [0, 0.5, 1],
+            rootMargin: '-10% 0px -10% 0px'
+        });
+        
+        document.querySelectorAll('.post-media-container').forEach(container => {
+            if (container.querySelector('video')) {
+                videoObserver.observe(container);
+            }
+        });
+    });
+
+    // ============ TOGGLE VIDEO PLAY/PAUSE ============
+    function toggleVideo(postId) {
+        const video = document.getElementById('postVideo' + postId);
+        const container = document.getElementById('mediaContainer' + postId);
+        if (!video) return;
+        
+        if (video.paused) {
+            video.play();
+            container.classList.remove('paused');
+        } else {
+            video.pause();
+            container.classList.add('paused');
+        }
+    }
+
+    // ============ LIKE HANDLER ============
+    async function handleLike(postId, button) {
+        const wasLiked = button.classList.contains('liked');
+        const icon = button.querySelector('i');
+        const span = button.querySelector('span');
+        let count = parseInt(span.textContent) || 0;
+        
+        if (wasLiked) {
+            button.classList.remove('liked');
+            icon.className = 'far fa-heart';
+            span.textContent = Math.max(0, count - 1);
+        } else {
+            button.classList.add('liked');
+            icon.className = 'fas fa-heart';
+            span.textContent = count + 1;
+        }
+        
+        try {
+            const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+            const response = await fetch(`/api/post/${postId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfMeta ? csrfMeta.getAttribute('content') : ''
+                }
+            });
+            const data = await response.json();
+            span.textContent = data.like_count;
+            if (data.liked) {
+                button.classList.add('liked');
+                icon.className = 'fas fa-heart';
+            } else {
+                button.classList.remove('liked');
+                icon.className = 'far fa-heart';
+            }
+        } catch (error) {
+            if (wasLiked) {
+                button.classList.add('liked');
+                icon.className = 'fas fa-heart';
+                span.textContent = count;
+            } else {
+                button.classList.remove('liked');
+                icon.className = 'far fa-heart';
+                span.textContent = count;
+            }
+        }
+    }
+
+    // ============ SHARE POST ============
+    async function sharePost(postId, title, content) {
+        const url = `${window.location.origin}/post/${postId}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, text: content, url });
+            } catch (err) {}
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                showToast('Link copied to clipboard!', 'success');
+            });
+        }
+    }
+
+    // ============ INFINITE SCROLL ============
+    let isLoading = false;
+    let currentPage = 1;
+    let hasMorePosts = true;
+
+    const scrollObserver = new IntersectionObserver(async (entries) => {
+        if (entries[0].isIntersecting && !isLoading && hasMorePosts) {
+            await loadMorePosts();
+        }
+    }, { rootMargin: '300px' });
+
+    const sentinel = document.getElementById('scrollSentinel');
+    if (sentinel) scrollObserver.observe(sentinel);
+
+    async function loadMorePosts() {
+        isLoading = true;
+        currentPage++;
+        
+        try {
+            const response = await fetch(`/api/feed?page=${currentPage}&per_page=10`);
+            const data = await response.json();
+            hasMorePosts = data.has_next;
+            
+            if (data.posts && data.posts.length > 0) {
+                const feedContainer = document.getElementById('feedContainer');
+                data.posts.forEach(post => {
+                    const card = createPostCard(post);
+                    feedContainer.insertBefore(card, sentinel);
+                });
+            }
+        } catch (error) {
+            currentPage--;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    function createPostCard(post) {
+        const div = document.createElement('div');
+        div.className = 'post-card';
+        div.setAttribute('data-post-id', post.id);
+        
+        let mediaHTML = '';
+        if (post.video) {
+            const videoSrc = post.video.startsWith('http') ? post.video : `/static/uploads/${post.video}`;
+            const posterSrc = post.thumbnail && post.thumbnail.startsWith('http') ? post.thumbnail : (post.thumbnail ? `/static/uploads/${post.thumbnail}` : '');
+            mediaHTML = `
+                <div class="post-media-container">
+                    <video src="${videoSrc}" poster="${posterSrc}" autoplay loop muted playsinline preload="metadata"></video>
+                </div>`;
+        } else if (post.image) {
+            const imgSrc = post.image.startsWith('http') ? post.image : `/static/uploads/${post.image}`;
+            mediaHTML = `<div class="post-media-container"><img src="${imgSrc}" loading="lazy"></div>`;
+        }
+        
+        const avatarSrc = post.author.profile_image && post.author.profile_image.startsWith('http') ? post.author.profile_image : `/static/uploads/${post.author.profile_image}`;
+        
+        div.innerHTML = `
+            ${mediaHTML}
+            <div class="post-body">
+                <div class="post-author">
+                    <a href="/profile/${post.author.username}"><img src="${avatarSrc}" alt="${post.author.username}" onerror="this.src='/static/uploads/default.jpg'"></a>
+                    <div>
+                        <a href="/profile/${post.author.username}" class="username">@${post.author.username}</a>
+                        ${post.category ? `<a href="/search?q=${post.category}" class="post-category">${post.category}</a>` : ''}
+                    </div>
+                </div>
+                <div class="post-content">${escapeHtml(post.content).substring(0, 200)}</div>
+                <div class="post-meta">
+                    <span>${post.created_at}</span>
+                    <span>${post.like_count} likes</span>
+                    <span>${post.comment_count} comments</span>
+                </div>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn like-btn" data-post-id="${post.id}" onclick="handleLike(${post.id}, this)">
+                    <i class="far fa-heart"></i> <span>${post.like_count}</span>
+                </button>
+                <button class="action-btn" onclick="window.location.href='/post/${post.id}'">
+                    <i class="far fa-comment"></i> <span>${post.comment_count}</span>
+                </button>
+                <button class="action-btn" onclick="sharePost(${post.id}, '${escapeHtml(post.title)}', '${escapeHtml(post.content).substring(0, 100)}')">
+                    <i class="far fa-share-square"></i> Share
+                </button>
+            </div>`;
+        return div;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+</script>
 {% endblock %}
