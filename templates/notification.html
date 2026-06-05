@@ -9,6 +9,54 @@
         margin: 0 auto;
         background: var(--bg-primary);
         min-height: 100vh;
+        padding-bottom: 80px;
+    }
+
+    /* Mobile Navigation */
+    .mobile-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid var(--border-color);
+        padding: 8px 0 var(--safe-bottom, 20px);
+        z-index: 1000;
+        justify-content: space-around;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.05);
+    }
+
+    @media (min-width: 992px) {
+        .mobile-nav { display: none; }
+    }
+
+    .mobile-nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary);
+        font-size: 10px;
+        text-decoration: none;
+        transition: color 0.2s;
+        padding: 4px 12px;
+    }
+
+    .mobile-nav-item.active { color: var(--accent); }
+    .mobile-nav-item i { font-size: 20px; }
+
+    .mobile-nav-item.create-btn {
+        background: var(--accent);
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     }
     
     .notifications-header {
@@ -53,6 +101,10 @@
         cursor: pointer;
         border-bottom: 2px solid transparent;
         transition: all 0.2s;
+        background: none;
+        border-top: none;
+        border-left: none;
+        border-right: none;
     }
     
     .notif-tab.active {
@@ -76,6 +128,7 @@
         border-bottom: 1px solid var(--border-color);
         cursor: pointer;
         transition: background 0.15s;
+        position: relative;
     }
     
     .notification-item:hover {
@@ -83,7 +136,7 @@
     }
     
     .notification-item.unread {
-        background: rgba(255, 45, 85, 0.03);
+        background: #eff6ff;
     }
     
     .notification-item.unread::before {
@@ -94,7 +147,8 @@
         border-radius: 50%;
         position: absolute;
         left: 8px;
-        margin-top: 6px;
+        top: 50%;
+        transform: translateY(-50%);
     }
     
     .notif-icon-container {
@@ -107,11 +161,11 @@
         flex-shrink: 0;
     }
     
-    .notif-icon-container.like { background: rgba(255, 45, 85, 0.15); color: var(--accent); }
-    .notif-icon-container.comment { background: rgba(0, 122, 255, 0.15); color: #007aff; }
-    .notif-icon-container.follow { background: rgba(76, 175, 80, 0.15); color: #4caf50; }
-    .notif-icon-container.mention { background: rgba(255, 149, 0, 0.15); color: #ff9500; }
-    .notif-icon-container.system { background: rgba(255, 255, 255, 0.1); color: var(--text-secondary); }
+    .notif-icon-container.like { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .notif-icon-container.comment { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .notif-icon-container.follow { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .notif-icon-container.mention { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .notif-icon-container.system { background: rgba(100, 116, 139, 0.1); color: var(--text-secondary); }
     
     .notif-content {
         flex: 1;
@@ -170,6 +224,8 @@
         border-radius: 6px;
         font-size: 12px;
         font-weight: 600;
+        border: none;
+        cursor: pointer;
     }
     
     .notif-action-btn.primary {
@@ -193,6 +249,12 @@
         font-size: 64px;
         opacity: 0.2;
         margin-bottom: 16px;
+    }
+
+    @media (max-width: 480px) {
+        .notifications-container {
+            padding-bottom: 90px;
+        }
     }
 </style>
 
@@ -220,7 +282,7 @@
     <div id="notificationsList">
         {% if notifications %}
             {% for notif in notifications %}
-            <div class="notification-item {{ 'unread' if not notif.read else '' }}" 
+            <div class="notification-item {{ 'unread' if not notif.is_read else '' }}" 
                  data-type="{{ notif.type }}"
                  data-id="{{ notif.id }}"
                  onclick="handleNotificationClick('{{ notif.type }}', '{{ notif.target_url }}', {{ notif.id }})">
@@ -241,9 +303,11 @@
                 </div>
                 
                 <!-- Avatar -->
-                <img src="{{ url_for('static', filename='uploads/' + notif.actor_image) }}" 
-                     alt="{{ notif.actor_name }}"
-                     class="notif-avatar">
+                {% if notif.actor_image and notif.actor_image.startswith('http') %}
+                <img src="{{ notif.actor_image }}" alt="{{ notif.actor_name }}" class="notif-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + notif.actor_image) }}" alt="{{ notif.actor_name }}" class="notif-avatar" onerror="this.src='{{ url_for('static', filename='uploads/default.jpg') }}'">
+                {% endif %}
                 
                 <!-- Content -->
                 <div class="notif-content">
@@ -252,7 +316,7 @@
                         {% if notif.type == 'like' %}
                             liked your post
                         {% elif notif.type == 'comment' %}
-                            commented: "{{ notif.comment_preview }}"
+                            commented on your post
                         {% elif notif.type == 'follow' %}
                             started following you
                         {% elif notif.type == 'mention' %}
@@ -266,7 +330,7 @@
                     <div class="notif-time">{{ notif.created_at }}</div>
                     
                     <!-- Follow Back Button -->
-                    {% if notif.type == 'follow' and not notif.is_following_back %}
+                    {% if notif.type == 'follow' %}
                     <div class="notif-actions">
                         <button class="notif-action-btn primary" 
                                 onclick="event.stopPropagation(); followBack('{{ notif.actor_name }}', this, {{ notif.id }})">
@@ -278,9 +342,11 @@
                 
                 <!-- Post Thumbnail (for likes/comments) -->
                 {% if notif.post_thumbnail %}
-                <img src="{{ url_for('static', filename='uploads/' + notif.post_thumbnail) }}" 
-                     alt="Post thumbnail"
-                     class="notif-thumbnail">
+                    {% if notif.post_thumbnail.startswith('http') %}
+                    <img src="{{ notif.post_thumbnail }}" alt="Post thumbnail" class="notif-thumbnail" onerror="this.style.display='none'">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='uploads/' + notif.post_thumbnail) }}" alt="Post thumbnail" class="notif-thumbnail" onerror="this.style.display='none'">
+                    {% endif %}
                 {% endif %}
             </div>
             {% endfor %}
@@ -294,7 +360,29 @@
     </div>
 </div>
 
-<!-- Hidden CSRF token -->
+<!-- Mobile Bottom Navigation -->
+<nav class="mobile-nav">
+    <a href="{{ url_for('home') }}" class="mobile-nav-item">
+        <i class="fas fa-home"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('search') }}" class="mobile-nav-item">
+        <i class="fas fa-search"></i>
+        <span>Discover</span>
+    </a>
+    <a href="{{ url_for('new_post') }}" class="mobile-nav-item create-btn">
+        <i class="fas fa-plus"></i>
+    </a>
+    <a href="{{ url_for('messages') }}" class="mobile-nav-item">
+        <i class="fas fa-comments"></i>
+        <span>Chats</span>
+    </a>
+    <a href="{{ url_for('profile') }}" class="mobile-nav-item">
+        <i class="fas fa-user"></i>
+        <span>Profile</span>
+    </a>
+</nav>
+
 <meta name="csrf-token" content="{{ csrf_token() }}">
 {% endblock %}
 
@@ -302,11 +390,9 @@
 <script>
 // ============ FILTER NOTIFICATIONS ============
 function filterNotifications(type, tabElement) {
-    // Update active tab
     document.querySelectorAll('.notif-tab').forEach(t => t.classList.remove('active'));
     tabElement.classList.add('active');
     
-    // Filter items
     document.querySelectorAll('.notification-item').forEach(item => {
         if (type === 'all') {
             item.style.display = 'flex';
@@ -318,7 +404,6 @@ function filterNotifications(type, tabElement) {
 
 // ============ HANDLE CLICK ============
 async function handleNotificationClick(type, targetUrl, notifId) {
-    // Mark as read
     try {
         await fetch(`/api/notifications/${notifId}/read`, {
             method: 'POST',
@@ -328,7 +413,6 @@ async function handleNotificationClick(type, targetUrl, notifId) {
             }
         });
         
-        // Remove unread styling
         const item = document.querySelector(`[data-id="${notifId}"]`);
         if (item) item.classList.remove('unread');
         
@@ -336,8 +420,7 @@ async function handleNotificationClick(type, targetUrl, notifId) {
         console.error('Failed to mark notification read:', e);
     }
     
-    // Navigate to target
-    if (targetUrl) {
+    if (targetUrl && targetUrl !== '#') {
         window.location.href = targetUrl;
     }
 }
@@ -353,12 +436,10 @@ async function markAllRead() {
             }
         });
         
-        // Remove all unread styling
         document.querySelectorAll('.notification-item.unread').forEach(item => {
             item.classList.remove('unread');
         });
         
-        // Update count
         document.getElementById('allCount').textContent = '0';
         
         showToast('All notifications marked as read', 'success');
@@ -372,7 +453,6 @@ async function markAllRead() {
 async function followBack(username, button, notifId) {
     button.textContent = 'Following';
     button.disabled = true;
-    button.classList.add('following');
     
     try {
         const response = await fetch(`/follow/${username}`, {
@@ -389,7 +469,6 @@ async function followBack(username, button, notifId) {
     } catch (e) {
         button.textContent = 'Follow Back';
         button.disabled = false;
-        button.classList.remove('following');
         showToast('Failed to follow', 'error');
     }
 }
@@ -397,10 +476,9 @@ async function followBack(username, button, notifId) {
 // ============ UPDATE COUNTS ============
 function updateNotificationCounts() {
     const allUnread = document.querySelectorAll('.notification-item.unread').length;
-    document.getElementById('allCount').textContent = allUnread || '';
+    document.getElementById('allCount').textContent = allUnread || '0';
 }
 
-// Initialize
 document.addEventListener('DOMContentLoaded', updateNotificationCounts);
 </script>
 {% endblock %}
