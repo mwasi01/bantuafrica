@@ -3,11 +3,12 @@
 {% block title %}Create Post | Bantu Africa{% endblock %}
 
 {% block content %}
+<!-- Bantu Africa v2.1 | Create Post with Mobile Nav + Submit Bar Fix -->
 <style>
     .create-post-container {
         max-width: 600px;
         margin: 0 auto;
-        padding: 20px 16px 100px;
+        padding: 20px 16px 160px;
         min-height: 100vh;
         background: var(--bg-primary);
     }
@@ -270,7 +271,7 @@
     }
 
     .remove-media-btn:hover {
-        background: var(--accent);
+        background: #ef4444;
     }
 
     .video-duration-badge {
@@ -285,16 +286,22 @@
         font-weight: 600;
     }
 
-    /* Post Button */
+    /* Post Submit Bar - ABOVE mobile nav on mobile, fixed to bottom on desktop */
     .post-submit-section {
         position: fixed;
-        bottom: 0;
+        bottom: 60px;
         left: 0;
         right: 0;
         padding: 12px 16px var(--safe-bottom, 20px);
         background: var(--bg-secondary);
         border-top: 1px solid var(--border-color);
-        z-index: 100;
+        z-index: 1001;
+    }
+
+    @media (min-width: 992px) {
+        .post-submit-section {
+            bottom: 0;
+        }
     }
 
     .post-submit-inner {
@@ -367,7 +374,7 @@
     /* Responsive */
     @media (max-width: 600px) {
         .create-post-container {
-            padding: 12px 12px 120px;
+            padding: 12px 12px 160px;
         }
         
         .content-textarea {
@@ -414,7 +421,6 @@
     <form method="POST" action="{{ url_for('new_post') }}" enctype="multipart/form-data" id="postForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         
-        <!-- Content -->
         <textarea 
             name="content" 
             class="content-textarea" 
@@ -424,12 +430,10 @@
             required
         >{{ request.form.get('content', '') }}</textarea>
         
-        <!-- Character count -->
         <div style="text-align: right; font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
             <span id="charCount">0</span>/5000
         </div>
 
-        <!-- Category Selection -->
         <div class="category-section">
             <span class="category-label">Category</span>
             <div class="category-chips" id="categoryChips">
@@ -464,7 +468,6 @@
             <input type="hidden" name="category" value="general" id="categoryInput">
         </div>
 
-        <!-- Media Upload Zone -->
         <div class="media-upload-section" id="mediaUploadZone" onclick="document.getElementById('mediaInput').click()">
             <div id="uploadPlaceholder">
                 <div class="upload-icon">
@@ -474,18 +477,15 @@
                 <div class="upload-hint">JPG, PNG, GIF, MP4, MOV, WebM • Max 100MB</div>
             </div>
             
-            <!-- Hidden file inputs with proper name attributes -->
             <input type="file" id="mediaInput" name="image" accept="image/*,video/*" 
                    style="display: none;" 
                    onchange="handleMediaSelect(this)">
             
-            <!-- Upload progress -->
             <div class="upload-progress" id="uploadProgress">
                 <div class="upload-progress-fill" id="uploadProgressFill"></div>
             </div>
         </div>
 
-        <!-- Media Preview -->
         <div class="media-preview-container" id="mediaPreviewContainer">
             <div id="mediaPreview"></div>
             <button type="button" class="remove-media-btn" onclick="removeMedia()" title="Remove media">
@@ -496,8 +496,8 @@
     </form>
 </div>
 
-<!-- Fixed Bottom Submit Bar -->
-<div class="post-submit-section">
+<!-- Fixed Bottom Submit Bar - Sits ABOVE mobile nav on mobile, at bottom on desktop -->
+<div class="post-submit-section" id="postSubmitBar">
     <div class="post-submit-inner">
         <button type="button" class="draft-btn" onclick="saveDraft()" title="Save as draft">
             <i class="far fa-save"></i> Draft
@@ -509,7 +509,7 @@
 </div>
 
 <!-- Mobile Bottom Navigation -->
-<nav class="mobile-nav">
+<nav class="mobile-nav" id="mobileNav">
     <a href="{{ url_for('home') }}" class="mobile-nav-item">
         <i class="fas fa-home"></i>
         <span>Home</span>
@@ -535,6 +535,12 @@
 
 {% block scripts %}
 <script>
+    /* ============================================================
+       Bantu Africa v2.1 - Create Post Scripts
+       Features: Category selection, media upload, draft saving,
+       form validation, keyboard shortcuts, Cloudinary support
+       ============================================================ */
+
     // ============ CATEGORY SELECTION ============
     const categoryChips = document.querySelectorAll('.category-chip');
     const categoryInput = document.getElementById('categoryInput');
@@ -556,7 +562,7 @@
         const count = this.value.length;
         charCount.textContent = count;
         if (count > 4500) {
-            charCount.style.color = 'var(--accent)';
+            charCount.style.color = '#ef4444';
         } else {
             charCount.style.color = 'var(--text-secondary)';
         }
@@ -578,66 +584,57 @@
         const file = input.files[0];
         if (!file) return;
         
+        // Validate file size (100MB max)
         if (file.size > 100 * 1024 * 1024) {
             showToast('File is too large. Maximum size is 100MB.', 'error');
             input.value = '';
             return;
         }
         
+        // Validate file type
         const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 
                             'video/mp4', 'video/quicktime', 'video/webm'];
         if (!allowedTypes.includes(file.type)) {
-            showToast('Unsupported file type. Please upload JPG, PNG, GIF, MP4, MOV, or WebM.', 'error');
+            showToast('Unsupported file type. Use JPG, PNG, GIF, MP4, MOV, or WebM.', 'error');
             input.value = '';
             return;
         }
         
         selectedFile = file;
-        
         uploadProgress.classList.add('active');
         uploadProgressFill.style.width = '30%';
         
         const reader = new FileReader();
         reader.onprogress = function(e) {
             if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                uploadProgressFill.style.width = percent + '%';
+                uploadProgressFill.style.width = Math.round((e.loaded / e.total) * 100) + '%';
             }
         };
         
         reader.onload = function(e) {
             uploadProgressFill.style.width = '100%';
-            
             setTimeout(() => {
                 uploadProgress.classList.remove('active');
                 uploadProgressFill.style.width = '0%';
-                
                 mediaUploadZone.classList.add('has-media');
                 uploadPlaceholder.style.display = 'none';
                 mediaPreviewContainer.classList.add('active');
                 
                 if (file.type.startsWith('video/')) {
-                    mediaPreview.innerHTML = `
-                        <video src="${e.target.result}" controls class="media-preview" id="videoPreview"></video>
-                    `;
-                    
+                    mediaPreview.innerHTML = `<video src="${e.target.result}" controls class="media-preview" id="videoPreview"></video>`;
                     const video = document.getElementById('videoPreview');
                     video.onloadedmetadata = function() {
-                        const duration = Math.round(video.duration);
-                        const minutes = Math.floor(duration / 60);
-                        const seconds = duration % 60;
-                        videoDurationBadge.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        const mins = Math.floor(video.duration / 60);
+                        const secs = Math.floor(video.duration % 60);
+                        videoDurationBadge.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
                         videoDurationBadge.style.display = 'block';
                     };
                 } else {
-                    mediaPreview.innerHTML = `
-                        <img src="${e.target.result}" alt="Preview" class="media-preview">
-                    `;
+                    mediaPreview.innerHTML = `<img src="${e.target.result}" alt="Preview" class="media-preview">`;
                     videoDurationBadge.style.display = 'none';
                 }
             }, 300);
         };
-        
         reader.readAsDataURL(file);
     }
 
@@ -664,16 +661,13 @@
         e.preventDefault();
         this.style.borderColor = 'var(--border-color)';
         this.style.background = 'transparent';
-        if (this.classList.contains('has-media')) {
-            this.style.borderColor = 'var(--accent)';
-        }
+        if (this.classList.contains('has-media')) this.style.borderColor = 'var(--accent)';
     });
 
     mediaUploadZone.addEventListener('drop', function(e) {
         e.preventDefault();
         this.style.borderColor = 'var(--border-color)';
         this.style.background = 'transparent';
-        
         const file = e.dataTransfer.files[0];
         if (file) {
             const input = document.getElementById('mediaInput');
@@ -688,23 +682,14 @@
     function saveDraft() {
         const content = postContent.value.trim();
         const category = categoryInput.value;
-        
-        if (!content && !selectedFile) {
-            showToast('Nothing to save as draft.', 'info');
-            return;
+        if (!content && !selectedFile) { 
+            showToast('Nothing to save as draft.', 'info'); 
+            return; 
         }
-        
-        const draft = {
-            content: content,
-            category: category,
-            timestamp: new Date().toISOString()
-        };
-        
         const drafts = JSON.parse(localStorage.getItem('bantu_drafts') || '[]');
-        drafts.unshift(draft);
+        drafts.unshift({ content, category, timestamp: new Date().toISOString() });
         localStorage.setItem('bantu_drafts', JSON.stringify(drafts.slice(0, 10)));
-        
-        showToast('Draft saved!', 'success');
+        showToast('Draft saved successfully!', 'success');
     }
 
     function loadLastDraft() {
@@ -716,9 +701,7 @@
                 categoryInput.value = lastDraft.category;
                 categoryChips.forEach(chip => {
                     chip.classList.remove('selected');
-                    if (chip.getAttribute('data-category') === lastDraft.category) {
-                        chip.classList.add('selected');
-                    }
+                    if (chip.getAttribute('data-category') === lastDraft.category) chip.classList.add('selected');
                 });
             }
             charCount.textContent = postContent.value.length;
@@ -732,17 +715,14 @@
     
     postForm.addEventListener('submit', function(e) {
         const content = postContent.value.trim();
-        
         if (!content && !selectedFile) {
             e.preventDefault();
             showToast('Please add some content or media to your post.', 'error');
             return false;
         }
-        
         formSubmitted = true;
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
-        
         return true;
     });
 
@@ -754,7 +734,7 @@
         }
     });
 
-    // Handle browser back button with unsaved content
+    // ============ UNSAVED CHANGES WARNING ============
     window.addEventListener('beforeunload', function(e) {
         if (!formSubmitted && (postContent.value.trim() || selectedFile)) {
             e.preventDefault();
@@ -773,14 +753,11 @@
     document.addEventListener('DOMContentLoaded', function() {
         loadLastDraft();
         postContent.focus();
-        
         const savedCategory = '{{ request.form.get("category", "general") }}';
         if (savedCategory && savedCategory !== 'general') {
             categoryChips.forEach(chip => {
                 chip.classList.remove('selected');
-                if (chip.getAttribute('data-category') === savedCategory) {
-                    chip.classList.add('selected');
-                }
+                if (chip.getAttribute('data-category') === savedCategory) chip.classList.add('selected');
             });
             categoryInput.value = savedCategory;
         }
