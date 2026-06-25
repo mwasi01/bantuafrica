@@ -1,5 +1,4 @@
 import os
-import subprocess
 from datetime import datetime, timedelta
 from flask import Flask, render_template, url_for, flash, redirect, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -30,7 +29,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 if not app.config['SECRET_KEY']:
     raise RuntimeError("SECRET_KEY environment variable is required. Add it in Render Dashboard → Environment.")
 
-# Database configuration - FORCE PostgreSQL when DATABASE_URL is present
+# Database configuration
 database_url = os.environ.get('DATABASE_URL')
 if not database_url:
     print("⚠️ No DATABASE_URL found. Using local SQLite (development only).")
@@ -54,7 +53,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'mp4', 'mov', 'webm', 'avi', 
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'webm', 'avi', 'mkv', 'wmv', 'flv', '3gp', 'm4v', 'ogg', 'ogv', 'mpeg', 'mpg', 'ts', 'm2ts', 'mts'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB for video support
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -63,18 +62,14 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# Initialize SocketIO for real-time call signaling
+# Initialize SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 print("✅ SocketIO initialized for real-time calling")
 
-# CSRF protection
+# ============ CSRF PROTECTION - COMPLETELY DISABLED ============
+# CSRF is disabled to allow Android app to login without CSRF token
 csrf = None
-try:
-    from flask_wtf.csrf import CSRFProtect
-    csrf = CSRFProtect(app)
-    print("✅ CSRF protection enabled")
-except ImportError:
-    print("⚠️ Flask-WTF not installed. CSRF protection disabled.")
+print("⚠️ CSRF protection is DISABLED for API compatibility")
 
 # Rate limiting
 limiter = None
@@ -93,7 +88,6 @@ except ImportError:
 
 # Create upload folder and default image
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-DEFAULT_IMAGE_URL = "https://res.cloudinary.com/demo/image/upload/v1/sample.jpg"
 
 # ============ MODELS ============
 
@@ -238,7 +232,6 @@ class Follow(db.Model):
     __table_args__ = (db.UniqueConstraint('follower_id', 'followed_id', name='unique_follow'),)
 
 class SavedPost(db.Model):
-    """Posts saved/bookmarked by users"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
@@ -248,7 +241,6 @@ class SavedPost(db.Model):
     user = db.relationship('User', foreign_keys=[user_id], overlaps='saved_posts,saver')
 
 class Repost(db.Model):
-    """Tracks reposts of posts"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     original_post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
@@ -260,7 +252,6 @@ class Repost(db.Model):
     reposted_post = db.relationship('Post', foreign_keys=[reposted_post_id])
 
 class Call(db.Model):
-    """Tracks voice/video calls between users"""
     id = db.Column(db.Integer, primary_key=True)
     caller_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -350,7 +341,6 @@ def allowed_video_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
 
 def upload_to_cloudinary(file, folder="bantu_uploads", resource_type="image"):
-    """Upload a file to Cloudinary and return the secure URL"""
     try:
         result = cloudinary.uploader.upload(
             file,
@@ -367,7 +357,6 @@ def upload_to_cloudinary(file, folder="bantu_uploads", resource_type="image"):
         return None
 
 def save_picture(form_picture):
-    """Upload image to Cloudinary and return the URL"""
     try:
         i = Image.open(form_picture)
         print(f"📸 Processing image - Mode: {i.mode}, Size: {i.size}")
@@ -404,7 +393,6 @@ def save_picture(form_picture):
         return None
 
 def save_video(file):
-    """Upload video to Cloudinary and return URLs"""
     try:
         video_url = upload_to_cloudinary(file, folder="bantu_videos", resource_type="video")
         if video_url:
@@ -472,13 +460,10 @@ def load_user(user_id):
 @app.context_processor
 def utility_processor():
     def get_csrf_token():
-        if csrf:
-            from flask_wtf.csrf import generate_csrf
-            return generate_csrf()
         return ''
     return dict(csrf_token=get_csrf_token)
 
-# ============ SOCKETIO EVENTS FOR REAL-TIME CALLS ============
+# ============ SOCKETIO EVENTS ============
 
 @socketio.on('connect')
 def handle_connect():
@@ -493,7 +478,6 @@ def handle_disconnect():
 
 @socketio.on('call_user')
 def handle_call_user(data):
-    """Forward call signal to the receiver"""
     receiver_username = data.get('receiver')
     receiver = User.query.filter_by(username=receiver_username).first()
     if receiver:
@@ -508,7 +492,6 @@ def handle_call_user(data):
 
 @socketio.on('call_accepted')
 def handle_call_accepted(data):
-    """Notify caller that call was accepted"""
     caller_username = data.get('caller')
     caller = User.query.filter_by(username=caller_username).first()
     if caller:
@@ -518,7 +501,6 @@ def handle_call_accepted(data):
 
 @socketio.on('call_rejected')
 def handle_call_rejected(data):
-    """Notify caller that call was rejected"""
     caller_username = data.get('caller')
     caller = User.query.filter_by(username=caller_username).first()
     if caller:
@@ -528,7 +510,6 @@ def handle_call_rejected(data):
 
 @socketio.on('call_ended')
 def handle_call_ended(data):
-    """Notify other party that call ended"""
     other_username = data.get('other_user')
     other = User.query.filter_by(username=other_username).first()
     if other:
@@ -824,7 +805,6 @@ def add_comment(post_id):
 @app.route('/api/post/<int:post_id>/save', methods=['POST'])
 @login_required
 def save_post(post_id):
-    """Toggle save/unsave a post"""
     try:
         post = Post.query.get_or_404(post_id)
         saved = SavedPost.query.filter_by(user_id=current_user.id, post_id=post_id).first()
@@ -845,7 +825,6 @@ def save_post(post_id):
 @app.route('/api/saved-posts')
 @login_required
 def get_saved_posts():
-    """Get all saved posts for the current user"""
     try:
         saved = SavedPost.query.filter_by(user_id=current_user.id).order_by(SavedPost.created_at.desc()).all()
         post_ids = [s.post_id for s in saved]
@@ -859,7 +838,6 @@ def get_saved_posts():
 @app.route('/api/post/<int:post_id>/repost', methods=['POST'])
 @login_required
 def repost_post(post_id):
-    """Repost a post to the current user's feed"""
     try:
         original = Post.query.get_or_404(post_id)
         
@@ -896,16 +874,14 @@ def repost_post(post_id):
 @app.route('/api/post/<int:post_id>/repost-count')
 @login_required
 def repost_count(post_id):
-    """Get repost count for a post"""
     count = Repost.query.filter_by(original_post_id=post_id).count()
     return jsonify({'count': count})
 
-# ============ CALL ROUTES (WebRTC Signaling) ============
+# ============ CALL ROUTES ============
 
 @app.route('/call/<int:call_id>')
 @login_required
 def call_page(call_id):
-    """Render the call interface page"""
     call = Call.query.get_or_404(call_id)
     
     if current_user.id not in [call.caller_id, call.receiver_id]:
@@ -930,13 +906,11 @@ def call_page(call_id):
 @app.route('/calls')
 @login_required
 def calls_history_page():
-    """Render the call history page"""
     return render_template('calls_history.html')
 
 @app.route('/api/call/initiate', methods=['POST'])
 @login_required
 def initiate_call():
-    """Initiate a new call"""
     try:
         data = request.get_json() or {}
         receiver_username = data.get('receiver')
@@ -958,7 +932,6 @@ def initiate_call():
         db.session.add(call)
         db.session.commit()
         
-        # Emit SocketIO event to notify receiver in real-time
         try:
             socketio.emit('incoming_call', {
                 'caller': current_user.username,
@@ -971,7 +944,6 @@ def initiate_call():
         except Exception as e:
             print(f"⚠️ SocketIO emit failed (user may be offline): {e}")
         
-        # Also create a database notification as fallback
         create_notification(
             user=receiver,
             actor=current_user,
@@ -994,7 +966,6 @@ def initiate_call():
 @app.route('/api/call/<int:call_id>/status', methods=['POST'])
 @login_required
 def update_call_status(call_id):
-    """Update call status (accept, reject, end)"""
     try:
         call = Call.query.get_or_404(call_id)
         data = request.get_json() or {}
@@ -1018,7 +989,6 @@ def update_call_status(call_id):
 @app.route('/api/calls/history')
 @login_required
 def call_history():
-    """Get call history for current user"""
     try:
         calls = Call.query.filter(
             (Call.caller_id == current_user.id) | (Call.receiver_id == current_user.id)
