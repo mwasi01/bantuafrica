@@ -67,7 +67,6 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 print("✅ SocketIO initialized for real-time calling")
 
 # ============ CSRF PROTECTION - COMPLETELY DISABLED ============
-# CSRF is disabled to allow Android app to login without CSRF token
 csrf = None
 print("⚠️ CSRF protection is DISABLED for API compatibility")
 
@@ -86,8 +85,16 @@ try:
 except ImportError:
     print("⚠️ Flask-Limiter not installed. Rate limiting disabled.")
 
-# Create upload folder and default image
+# Create upload folder
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# ============ HELPER: Check if request is from Android App ============
+def is_api_request():
+    """Check if the request is from the Android app (expects JSON)"""
+    return (request.is_json or 
+            request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+            request.headers.get('Accept', '').startswith('application/json') or
+            'Android' in request.headers.get('User-Agent', ''))
 
 # ============ MODELS ============
 
@@ -137,8 +144,11 @@ class User(db.Model, UserMixin):
         return {
             'id': self.id,
             'username': self.username,
+            'email': self.email,
             'profile_image': self.profile_image,
             'bio': self.bio,
+            'location': self.location,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
             'followers_count': self.followers.count(),
             'following_count': self.following.count()
         }
@@ -533,69 +543,123 @@ def home():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
+        if is_api_request():
+            return jsonify({'success': True, 'message': 'Already logged in', 'user': current_user.to_dict()})
         return redirect(url_for('home'))
+    
     if request.method == 'POST':
         try:
             username = request.form.get('username', '').strip()
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
             confirm_password = request.form.get('confirm_password', '')
+            
             if not all([username, email, password]):
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'All fields are required'}), 400
                 flash('All fields are required!', 'danger')
                 return redirect(url_for('register'))
+            
             if password != confirm_password:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Passwords do not match'}), 400
                 flash('Passwords do not match!', 'danger')
                 return redirect(url_for('register'))
+            
             if len(password) < 6:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Password must be at least 6 characters'}), 400
                 flash('Password must be at least 6 characters!', 'danger')
                 return redirect(url_for('register'))
+            
             if User.query.filter_by(username=username).first():
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Username already exists'}), 409
                 flash('Username already exists!', 'danger')
                 return redirect(url_for('register'))
+            
             if User.query.filter_by(email=email).first():
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Email already registered'}), 409
                 flash('Email already registered!', 'danger')
                 return redirect(url_for('register'))
+            
             hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
             user = User(username=username, email=email, password=hashed_password)
             db.session.add(user)
             db.session.commit()
+            
+            if is_api_request():
+                return jsonify({'success': True, 'message': 'Account created successfully! Please log in.'})
+            
             flash('Account created successfully! Please log in.', 'success')
             return redirect(url_for('login'))
+            
         except Exception as e:
             db.session.rollback()
             print(f"Registration error: {e}")
+            if is_api_request():
+                return jsonify({'success': False, 'message': str(e)}), 500
             flash('An error occurred during registration. Please try again.', 'danger')
+            return redirect(url_for('register'))
+    
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        if is_api_request():
+            return jsonify({'success': True, 'message': 'Already logged in', 'user': current_user.to_dict()})
         return redirect(url_for('home'))
+    
     if request.method == 'POST':
         try:
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password', '')
             remember = bool(request.form.get('remember'))
+            
             if not email or not password:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Email and password required'}), 400
                 flash('Please enter both email and password.', 'danger')
                 return redirect(url_for('login'))
+            
             user = User.query.filter_by(email=email).first()
             if user and bcrypt.check_password_hash(user.password, password):
                 login_user(user, remember=remember)
                 next_page = request.args.get('next')
+                
+                if is_api_request():
+                    return jsonify({
+                        'success': True,
+                        'message': f'Welcome back, {user.username}!',
+                        'user': user.to_dict()
+                    })
+                
                 flash(f'Welcome back, {user.username}!', 'success')
                 return redirect(next_page) if next_page else redirect(url_for('home'))
             else:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Invalid email or password'}), 401
                 flash('Invalid email or password. Please try again.', 'danger')
+                return redirect(url_for('login'))
+                
         except Exception as e:
             db.session.rollback()
             print(f"Login error: {e}")
+            if is_api_request():
+                return jsonify({'success': False, 'message': str(e)}), 500
             flash(f'Login error: {str(e)}', 'danger')
+            return redirect(url_for('login'))
+    
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
+    if is_api_request():
+        logout_user()
+        return jsonify({'success': True, 'message': 'Logged out successfully'})
     logout_user()
     return redirect(url_for('home'))
 
@@ -607,12 +671,24 @@ def profile():
         followers_count = current_user.followers.count()
         following_count = current_user.following.count()
         stories_count = Story.query.filter(Story.user_id == current_user.id, Story.expires_at > datetime.utcnow()).count()
+        
+        if is_api_request():
+            return jsonify({
+                'user': current_user.to_dict(),
+                'posts': [p.to_dict() for p in user_posts],
+                'followers_count': followers_count,
+                'following_count': following_count,
+                'stories_count': stories_count
+            })
     except Exception as e:
         print(f"Profile error: {e}")
+        if is_api_request():
+            return jsonify({'error': str(e)}), 500
         user_posts = []
         followers_count = 0
         following_count = 0
         stories_count = 0
+    
     return render_template('profile.html', user=current_user, posts=user_posts,
                          followers_count=followers_count, following_count=following_count,
                          stories_count=stories_count)
@@ -627,10 +703,23 @@ def user_profile(username):
         followers_count = user.followers.count()
         following_count = user.following.count()
         stories_count = Story.query.filter(Story.user_id == user.id, Story.expires_at > datetime.utcnow()).count()
+        
+        if is_api_request():
+            return jsonify({
+                'user': user.to_dict(),
+                'posts': [p.to_dict() for p in posts],
+                'is_following': is_following,
+                'followers_count': followers_count,
+                'following_count': following_count,
+                'stories_count': stories_count
+            })
     except Exception as e:
         print(f"User profile error: {e}")
+        if is_api_request():
+            return jsonify({'error': str(e)}), 404
         flash('User not found.', 'danger')
         return redirect(url_for('home'))
+    
     return render_template('user_profile.html', user=user, posts=posts,
                          is_following=is_following, followers_count=followers_count,
                          following_count=following_count, stories_count=stories_count)
@@ -639,13 +728,19 @@ def user_profile(username):
 @login_required
 def user_followers(username):
     user = User.query.filter_by(username=username).first_or_404()
-    return render_template('followers.html', user=user, followers=[f.follower for f in user.followers])
+    followers = [f.follower.to_dict() for f in user.followers]
+    if is_api_request():
+        return jsonify({'followers': followers})
+    return render_template('followers.html', user=user, followers=followers)
 
 @app.route('/profile/<username>/following')
 @login_required
 def user_following(username):
     user = User.query.filter_by(username=username).first_or_404()
-    return render_template('following.html', user=user, following=[f.followed for f in user.following])
+    following = [f.followed.to_dict() for f in user.following]
+    if is_api_request():
+        return jsonify({'following': following})
+    return render_template('following.html', user=user, following=following)
 
 @app.route('/profile/update', methods=['GET', 'POST'])
 @login_required
@@ -656,24 +751,37 @@ def update_profile():
             if username:
                 existing = User.query.filter(User.username == username, User.id != current_user.id).first()
                 if existing:
+                    if is_api_request():
+                        return jsonify({'success': False, 'message': 'Username already taken'}), 409
                     flash('Username already taken!', 'danger')
                     return redirect(url_for('update_profile'))
                 current_user.username = username
+            
             current_user.bio = request.form.get('bio', '').strip()
             current_user.location = request.form.get('location', '').strip()
+            
             if 'profile_image' in request.files:
                 file = request.files['profile_image']
                 if file and file.filename and allowed_image_file(file.filename):
                     url = save_picture(file)
                     if url:
                         current_user.profile_image = url
+            
             db.session.commit()
+            
+            if is_api_request():
+                return jsonify({'success': True, 'message': 'Profile updated successfully!', 'user': current_user.to_dict()})
+            
             flash('Profile updated successfully!', 'success')
             return redirect(url_for('profile'))
         except Exception as e:
             db.session.rollback()
             print(f"Profile update error: {e}")
+            if is_api_request():
+                return jsonify({'success': False, 'message': str(e)}), 500
             flash('An error occurred. Please try again.', 'danger')
+            return redirect(url_for('update_profile'))
+    
     return render_template('update_profile.html')
 
 @app.route('/post/new', methods=['GET', 'POST'])
@@ -683,6 +791,8 @@ def new_post():
         try:
             content = request.form.get('content', '').strip()
             if not content:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Post content cannot be empty'}), 400
                 flash('Post content cannot be empty!', 'danger')
                 return redirect(url_for('new_post'))
             
@@ -714,12 +824,20 @@ def new_post():
             
             db.session.add(post)
             db.session.commit()
+            
+            if is_api_request():
+                return jsonify({'success': True, 'message': 'Post created!', 'post': post.to_dict()})
+            
             flash('Your post has been created!', 'success')
             return redirect(url_for('home'))
         except Exception as e:
             db.session.rollback()
             print(f"❌ Post creation error: {e}")
+            if is_api_request():
+                return jsonify({'success': False, 'message': str(e)}), 500
             flash(f'Error creating post: {str(e)}', 'danger')
+            return redirect(url_for('new_post'))
+    
     return render_template('create_post.html')
 
 @app.route('/post/<int:post_id>')
@@ -730,6 +848,10 @@ def view_post(post_id):
         update_user_interests(current_user, post)
     except Exception as e:
         print(f"Interest update error: {e}")
+    
+    if is_api_request():
+        return jsonify(post.to_dict())
+    
     return render_template('view_post.html', post=post)
 
 @app.route('/post/<int:post_id>/delete')
@@ -737,15 +859,21 @@ def view_post(post_id):
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
     if post.author != current_user:
+        if is_api_request():
+            return jsonify({'error': 'You cannot delete this post'}), 403
         flash('You cannot delete this post!', 'danger')
         return redirect(url_for('home'))
     try:
         db.session.delete(post)
         db.session.commit()
+        if is_api_request():
+            return jsonify({'success': True, 'message': 'Post deleted'})
         flash('Post deleted!', 'success')
     except Exception as e:
         db.session.rollback()
         print(f"Post deletion error: {e}")
+        if is_api_request():
+            return jsonify({'error': str(e)}), 500
         flash('An error occurred while deleting the post.', 'danger')
     return redirect(url_for('home'))
 
@@ -789,9 +917,10 @@ def add_comment(post_id):
         return jsonify({
             'success': True,
             'comment': {
+                'id': comment.id,
                 'content': comment.content,
                 'author': comment.author.username,
-                'author_image': url_for('static', filename=f'uploads/{comment.author.profile_image}') if not comment.author.profile_image.startswith('http') else comment.author.profile_image,
+                'author_image': comment.author.profile_image,
                 'created_at': comment.created_at.strftime('%b %d, %Y')
             },
             'comment_count': post.comment_count()
@@ -892,6 +1021,19 @@ def call_page(call_id):
     room_id = request.args.get('room', call.room_id)
     call_type = request.args.get('type', call.call_type)
     is_incoming = call.receiver_id == current_user.id and call.status == 'pending'
+    
+    if is_api_request():
+        return jsonify({
+            'call': {
+                'id': call.id,
+                'other_user': other_user.username,
+                'other_image': other_user.profile_image,
+                'room_id': room_id,
+                'call_type': call_type,
+                'is_incoming': is_incoming,
+                'status': call.status
+            }
+        })
     
     return render_template('call.html',
                          other_user=other_user,
@@ -1018,18 +1160,28 @@ def follow_user(username):
     try:
         user = User.query.filter_by(username=username).first_or_404()
         if current_user == user:
+            if is_api_request():
+                return jsonify({'error': 'You cannot follow yourself'}), 400
             flash('You cannot follow yourself!', 'danger')
             return redirect(url_for('user_profile', username=username))
         if current_user.is_following(user):
+            if is_api_request():
+                return jsonify({'message': f'Already following {username}'}), 200
             flash(f'You are already following {username}!', 'info')
             return redirect(url_for('user_profile', username=username))
         follow = Follow(follower_id=current_user.id, followed_id=user.id)
         db.session.add(follow)
         create_notification(user, current_user, 'follow')
         db.session.commit()
+        
+        if is_api_request():
+            return jsonify({'success': True, 'message': f'Now following {username}'})
+        
         flash(f'You are now following {username}!', 'success')
     except Exception as e:
         db.session.rollback()
+        if is_api_request():
+            return jsonify({'error': str(e)}), 500
         flash('An error occurred.', 'danger')
     return redirect(url_for('user_profile', username=username))
 
@@ -1042,9 +1194,15 @@ def unfollow_user(username):
         if follow:
             db.session.delete(follow)
             db.session.commit()
+            
+            if is_api_request():
+                return jsonify({'success': True, 'message': f'Unfollowed {username}'})
+            
             flash(f'You have unfollowed {username}!', 'success')
     except Exception as e:
         db.session.rollback()
+        if is_api_request():
+            return jsonify({'error': str(e)}), 500
         flash('An error occurred.', 'danger')
     return redirect(url_for('user_profile', username=username))
 
@@ -1060,6 +1218,14 @@ def search():
             posts = Post.query.filter(Post.content.contains(query) | Post.title.contains(query)).all()
         except Exception as e:
             print(f"Search error: {e}")
+    
+    if is_api_request():
+        return jsonify({
+            'query': query,
+            'users': [u.to_dict() for u in users],
+            'posts': [p.to_dict() for p in posts]
+        })
+    
     return render_template('search.html', query=query, users=users, posts=posts)
 
 @app.route('/api/search-users')
@@ -1070,7 +1236,7 @@ def api_search_users():
         return jsonify([])
     try:
         users = User.query.filter(User.username.contains(query), User.id != current_user.id).limit(10).all()
-        return jsonify([{'username': u.username, 'profile_image': u.profile_image} for u in users])
+        return jsonify([u.to_dict() for u in users])
     except Exception as e:
         print(f"User search error: {e}")
         return jsonify([])
@@ -1080,6 +1246,19 @@ def api_search_users():
 def view_stories(username):
     user = User.query.filter_by(username=username).first_or_404()
     stories = Story.query.filter(Story.user_id == user.id, Story.expires_at > datetime.utcnow()).order_by(Story.created_at.asc()).all()
+    
+    if is_api_request():
+        return jsonify({
+            'stories': [{
+                'id': s.id,
+                'image': s.image,
+                'video': s.video,
+                'caption': s.caption,
+                'created_at': s.created_at.isoformat(),
+                'author': user.to_dict()
+            } for s in stories]
+        })
+    
     return render_template('stories.html', stories=stories, story_owner=user)
 
 @app.route('/stories/create', methods=['GET', 'POST'])
@@ -1104,14 +1283,28 @@ def create_story():
                         if url:
                             story.image = url
             if not story.image and not story.video:
+                if is_api_request():
+                    return jsonify({'success': False, 'message': 'Please upload an image or video'}), 400
                 flash('Please upload an image or video for your story.', 'danger')
                 return redirect(url_for('create_story'))
             db.session.add(story)
             db.session.commit()
+            
+            if is_api_request():
+                return jsonify({'success': True, 'message': 'Story created!', 'story': {
+                    'id': story.id,
+                    'image': story.image,
+                    'video': story.video,
+                    'caption': story.caption,
+                    'created_at': story.created_at.isoformat()
+                }})
+            
             flash('Story created! It will expire in 24 hours.', 'success')
             return redirect(url_for('home'))
         except Exception as e:
             db.session.rollback()
+            if is_api_request():
+                return jsonify({'success': False, 'message': str(e)}), 500
             flash('An error occurred.', 'danger')
     return render_template('create_story.html')
 
@@ -1144,6 +1337,10 @@ def messages():
                 'verified': False
             })
     conversations.sort(key=lambda x: x.get('last_time', ''), reverse=True)
+    
+    if is_api_request():
+        return jsonify({'conversations': conversations})
+    
     return render_template('messages.html', conversations=conversations)
 
 @app.route('/api/messages/<username>')
@@ -1210,6 +1407,10 @@ def api_send_image():
 @login_required
 def notifications():
     notifications_list = Notification.query.filter_by(user_id=current_user.id).order_by(Notification.created_at.desc()).limit(50).all()
+    
+    if is_api_request():
+        return jsonify({'notifications': [n.to_dict() for n in notifications_list]})
+    
     return render_template('notifications.html', notifications=[n.to_dict() for n in notifications_list])
 
 @app.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
