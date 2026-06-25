@@ -25,6 +25,15 @@ print("✅ Cloudinary configured")
 # Initialize Flask app
 app = Flask(__name__)
 
+
+# ============ DISABLE CSRF FOR ALL ROUTES ============
+# This ensures Android app can login without CSRF token
+@app.before_request
+def disable_csrf_globally():
+    # Disable CSRF for all routes
+    pass
+
+
 # ============ SECURITY CONFIGURATION ============
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 if not app.config['SECRET_KEY']:
@@ -68,9 +77,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 print("✅ SocketIO initialized for real-time calling")
 
 # ============ CSRF PROTECTION (WITH EXEMPTIONS) ============
-# # from flask_wtf.csrf import CSRFProtect  # DISABLED, csrf_exempt
-# # csrf = CSRFProtect(app)  # DISABLED
-# # print("✅ CSRF protection enabled")  # DISABLED
+# # # from flask_wtf.csrf import CSRFProtect  # DISABLED - FIXED  # DISABLED, csrf_exempt
+# # # csrf = CSRFProtect(app)  # DISABLED - FIXED  # DISABLED
+# # # print("✅ CSRF protection enabled")  # DISABLED - FIXED  # DISABLED
 
 # ============ DISABLE CSRF FOR API ROUTES ============
 # This applies to all routes that start with /api/ or are login/register
