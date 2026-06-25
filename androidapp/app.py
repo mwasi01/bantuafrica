@@ -68,9 +68,9 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 print("✅ SocketIO initialized for real-time calling")
 
 # ============ CSRF PROTECTION (WITH EXEMPTIONS) ============
-from flask_wtf.csrf import CSRFProtect, csrf_exempt
-csrf = CSRFProtect(app)
-print("✅ CSRF protection enabled")
+# from flask_wtf.csrf import CSRFProtect, csrf_exempt
+# csrf = CSRFProtect(app)
+# print("✅ CSRF protection enabled")
 
 # ============ DISABLE CSRF FOR API ROUTES ============
 # This applies to all routes that start with /api/ or are login/register
